@@ -115,7 +115,7 @@ export async function generateAlbumCover(params: {
             plain_lyrics: params.plainLyrics,
             song_title: params.songTitle,
             styles: params.styles,
-            model: params.model || "imagen-4.0-ultra-generate-001",
+            model: params.model || "imagen-4.0-generate-preview-06-06",
         }),
     });
 }

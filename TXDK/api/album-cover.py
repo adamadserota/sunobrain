@@ -61,7 +61,7 @@ class handler(BaseHTTPRequestHandler):
 
         plain_lyrics = (body.get("plain_lyrics") or "")[:2000]
         styles = (body.get("styles") or "cinematic, moody, atmospheric")[:500]
-        model = body.get("model", "imagen-4.0-ultra-generate-001")
+        model = body.get("model", "imagen-4.0-generate-preview-06-06")
 
         if not plain_lyrics:
             _json_response(self, 400, {"detail": "plain_lyrics is required"})
@@ -91,7 +91,17 @@ class handler(BaseHTTPRequestHandler):
                 ),
             )
             if not response.generated_images:
-                _json_response(self, 502, {"detail": "No image was generated"})
+                reasons = []
+                for attr in ("rai_filtered_reasons", "positive_prompt_safety_attributes"):
+                    val = getattr(response, attr, None)
+                    if val:
+                        reasons.append(f"{attr}={val}")
+                detail = "No image was generated"
+                if reasons:
+                    detail += f" (likely safety filter: {'; '.join(reasons)})"
+                else:
+                    detail += f" \u2014 model '{model}' returned empty result. Try a different model."
+                _json_response(self, 502, {"detail": detail})
                 return
             image = response.generated_images[0].image
             image_b64 = base64.b64encode(image.image_bytes).decode("utf-8")

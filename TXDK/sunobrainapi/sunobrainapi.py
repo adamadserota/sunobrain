@@ -89,7 +89,7 @@ class AlbumCoverRequest(BaseModel):
     song_title: str = Field(default="UNTITLED")
     styles: str = Field(default="")
     api_key: str = Field(default="")  # ignored if env var is set
-    model: str = Field(default="imagen-4.0-ultra-generate-001")
+    model: str = Field(default="imagen-4.0-generate-preview-06-06")
 
 
 class AlbumCoverResponse(BaseModel):
@@ -292,7 +292,17 @@ async def album_cover(req: AlbumCoverRequest):
         )
 
         if not response.generated_images:
-            raise HTTPException(status_code=502, detail="No image was generated")
+            reasons = []
+            for attr in ("rai_filtered_reasons", "positive_prompt_safety_attributes"):
+                val = getattr(response, attr, None)
+                if val:
+                    reasons.append(f"{attr}={val}")
+            detail = "No image was generated"
+            if reasons:
+                detail += f" (likely safety filter: {'; '.join(reasons)})"
+            else:
+                detail += f" \u2014 model '{req.model}' returned empty result. Try a different model."
+            raise HTTPException(status_code=502, detail=detail)
 
         image = response.generated_images[0].image
         image_b64 = base64.b64encode(image.image_bytes).decode("utf-8")
