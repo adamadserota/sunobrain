@@ -15,10 +15,18 @@ const headerStyle = css({
     padding: "10px var(--fui-spacing-3)",
     background: "transparent",
     border: "none",
-    cursor: "pointer",
     transition: "all 0.15s ease",
+});
+
+const toggleAreaStyle = css({
+    display: "flex",
+    alignItems: "center",
+    gap: "var(--fui-spacing-2)",
+    cursor: "pointer",
+    flex: 1,
+    minWidth: 0,
     "&:hover": {
-        background: "var(--fui-bg-hover)",
+        opacity: 0.85,
     },
 });
 
@@ -65,15 +73,31 @@ export function CollapsibleCard({
 
     return (
         <div css={containerStyle}>
-            <button css={headerStyle} onClick={() => setOpen(!open)}>
-                <span css={[titleStyle, css({ color: titleColor })]}>{title}</span>
+            <div css={headerStyle}>
+                <div
+                    css={toggleAreaStyle}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setOpen(!open)}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setOpen(!open);
+                        }
+                    }}
+                >
+                    <span css={[titleStyle, css({ color: titleColor })]}>{title}</span>
+                </div>
                 <div css={rightStyle}>
-                    {open && headerRight}
-                    <span css={[chevronStyle, open && css({ transform: "rotate(180deg)" })]}>
+                    {open && headerRight && <div css={rightStyle}>{headerRight}</div>}
+                    <span
+                        css={[chevronStyle, open && css({ transform: "rotate(180deg)" }), css({ cursor: "pointer" })]}
+                        onClick={() => setOpen(!open)}
+                    >
                         &#9660;
                     </span>
                 </div>
-            </button>
+            </div>
             {open && <div css={bodyStyle}>{children}</div>}
         </div>
     );
