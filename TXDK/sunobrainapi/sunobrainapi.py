@@ -61,8 +61,9 @@ class GenerateRequest(BaseModel):
     mode: Literal[
         "lyrics", "theme_oneshot", "theme_draft", "optimize_draft",
         "builder_oneshot", "builder_draft",
+        "refresh_title", "refresh_styles", "refresh_exclude", "refresh_lyrics",
     ]
-    input: str = Field(..., min_length=1, max_length=10000)
+    input: str = Field(..., min_length=1, max_length=20000)
     api_key: str = Field(default="")  # ignored if env var is set
     model: str = Field(default="gemini-2.5-pro")
     provider: Literal["gemini", "deepseek"] = Field(default="gemini")
@@ -80,6 +81,7 @@ class GenerateResponse(BaseModel):
     lyrics: str = ""
     plain_lyrics: str = ""
     analysis: AnalysisOutput = AnalysisOutput()
+    title: str = ""  # populated by refresh_title only
 
 
 class AlbumCoverRequest(BaseModel):
@@ -238,6 +240,18 @@ async def generate(req: GenerateRequest):
             raise HTTPException(status_code=401, detail=f"Invalid {provider_name} API key")
         logger.error(f"{req.provider} API error: {e}", exc_info=True)
         raise HTTPException(status_code=502, detail=f"{req.provider} API error: {error_msg}")
+
+    if req.mode.startswith("refresh_"):
+        from parser import _strip_to_plain  # type: ignore[attr-defined]
+        text = raw_text.strip()
+        if req.mode == "refresh_title":
+            return GenerateResponse(title=text)
+        if req.mode == "refresh_styles":
+            return GenerateResponse(styles=text)
+        if req.mode == "refresh_exclude":
+            return GenerateResponse(exclude_styles=text)
+        # refresh_lyrics
+        return GenerateResponse(lyrics=text, plain_lyrics=_strip_to_plain(text))
 
     if req.mode in ("theme_draft", "builder_draft"):
         parsed = parse_draft_response(raw_text)

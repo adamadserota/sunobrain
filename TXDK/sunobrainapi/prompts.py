@@ -377,6 +377,68 @@ mood, but do NOT include artist names in the lyrics themselves.
 
 {_DRAFT_OUTPUT_FORMAT}"""
 
+_REFRESH_CONTEXT_NOTE = """\
+You will receive the current Suno v5.5 blueprint context in structured form, delimited by \
+---CURRENT_TITLE---, ---CURRENT_STYLES---, ---CURRENT_EXCLUDE---, ---CURRENT_LYRICS---, and \
+---ORIGINAL_INPUT--- markers. Use all of this context to maintain consistency across the song \
+while regenerating ONLY the section requested below.
+
+NEVER output real artist, band, or musician names — translate into sonic descriptors."""
+
+PROMPT_REFRESH_TITLE = f"""{_BASE_PERSONA}
+
+{_REFRESH_CONTEXT_NOTE}
+
+## Task
+Generate a single new, evocative song title that fits the lyrics, vibe, and style. It should \
+feel fresh — not simply a rewording of the current title. 2-6 words, title case, no quotes, \
+no brackets, no punctuation at end.
+
+## Output Format
+Output ONLY the new title on a single line. No delimiters, no headers, no explanation."""
+
+PROMPT_REFRESH_STYLES = f"""{_BASE_PERSONA}
+
+{_REFRESH_CONTEXT_NOTE}
+
+{_STYLE_INSTRUCTIONS}
+
+## Task
+Regenerate a fresh Suno v5.5 style prompt that fits the current lyrics and inspiration. Follow \
+the priority structure strictly. It should feel meaningfully different from the current style \
+prompt while remaining coherent with the lyrics.
+
+## Output Format
+Output ONLY the comma-separated style prompt on a single line/paragraph. No delimiters, no \
+headers, no preamble, no trailing explanation. Under 1,000 characters."""
+
+PROMPT_REFRESH_EXCLUDE = f"""{_BASE_PERSONA}
+
+{_REFRESH_CONTEXT_NOTE}
+
+{_EXCLUDE_INSTRUCTIONS}
+
+## Task
+Regenerate a fresh exclude-styles list tailored specifically to this song's sonic identity.
+
+## Output Format
+Output ONLY the comma-separated exclusion terms. No delimiters, no headers, no preamble."""
+
+PROMPT_REFRESH_LYRICS = f"""{_BASE_PERSONA}
+
+{_REFRESH_CONTEXT_NOTE}
+
+{_LYRICS_INSTRUCTIONS}
+
+## Task
+Rewrite the full Suno v5.5 lyric sheet from scratch — keep the emotional intent, theme, and \
+style coherence, but produce meaningfully new lyrics. Preserve the existing [Title: ...] unless \
+the original input suggests otherwise.
+
+## Output Format
+Output ONLY the full optimized lyric sheet, starting with [Title: ...] and ending with [End]. \
+No delimiters (do NOT output ---LYRICS---), no headers, no preamble, no trailing explanation."""
+
 PROMPTS = {
     "lyrics": PROMPT_LYRICS,
     "theme_oneshot": PROMPT_THEME_ONESHOT,
@@ -384,6 +446,10 @@ PROMPTS = {
     "optimize_draft": PROMPT_OPTIMIZE_DRAFT,
     "builder_oneshot": PROMPT_BUILDER_ONESHOT,
     "builder_draft": PROMPT_BUILDER_DRAFT,
+    "refresh_title": PROMPT_REFRESH_TITLE,
+    "refresh_styles": PROMPT_REFRESH_STYLES,
+    "refresh_exclude": PROMPT_REFRESH_EXCLUDE,
+    "refresh_lyrics": PROMPT_REFRESH_LYRICS,
 }
 
 

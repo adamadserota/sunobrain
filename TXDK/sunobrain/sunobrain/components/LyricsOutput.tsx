@@ -80,6 +80,8 @@ const saveBtnStyle = css({
 interface LyricsOutputProps {
     value: string;
     onChange?: (newLyrics: string) => void;
+    onRefresh?: () => void;
+    refreshing?: boolean;
 }
 
 function highlightTags(text: string) {
@@ -95,7 +97,7 @@ function highlightTags(text: string) {
     );
 }
 
-export function LyricsOutput({ value, onChange }: LyricsOutputProps) {
+export function LyricsOutput({ value, onChange, onRefresh, refreshing }: LyricsOutputProps) {
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState(value);
 
@@ -116,6 +118,16 @@ export function LyricsOutput({ value, onChange }: LyricsOutputProps) {
 
     const headerRight = value ? (
         <div css={css({ display: "flex", alignItems: "center", gap: "var(--fui-spacing-2)" })}>
+            {onRefresh && !editing && (
+                <button
+                    css={editBtnStyle}
+                    onClick={onRefresh}
+                    disabled={refreshing}
+                    title="Regenerate lyrics"
+                >
+                    {refreshing ? "\u21BB \u2026" : "\u21BB Refresh"}
+                </button>
+            )}
             {onChange && !editing && (
                 <button css={editBtnStyle} onClick={handleEdit}>Edit</button>
             )}

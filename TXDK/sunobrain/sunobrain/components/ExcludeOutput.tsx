@@ -64,9 +64,11 @@ const saveBtnStyle = css({
 interface ExcludeOutputProps {
     value: string;
     onChange?: (newExclude: string) => void;
+    onRefresh?: () => void;
+    refreshing?: boolean;
 }
 
-export function ExcludeOutput({ value, onChange }: ExcludeOutputProps) {
+export function ExcludeOutput({ value, onChange, onRefresh, refreshing }: ExcludeOutputProps) {
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState(value);
 
@@ -87,6 +89,16 @@ export function ExcludeOutput({ value, onChange }: ExcludeOutputProps) {
 
     const headerRight = value ? (
         <div css={css({ display: "flex", alignItems: "center", gap: "var(--fui-spacing-2)" })}>
+            {onRefresh && !editing && (
+                <button
+                    css={editBtnStyle}
+                    onClick={onRefresh}
+                    disabled={refreshing}
+                    title="Regenerate exclusions"
+                >
+                    {refreshing ? "\u21BB \u2026" : "\u21BB Refresh"}
+                </button>
+            )}
             {onChange && !editing && (
                 <button css={editBtnStyle} onClick={handleEdit}>Edit</button>
             )}

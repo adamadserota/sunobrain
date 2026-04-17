@@ -9,7 +9,7 @@ import { useGenerate } from "./hooks/useGenerate";
 import { useSavedStyles } from "./hooks/useSavedStyles";
 import { useSongHistory } from "./hooks/useSongHistory";
 import { useLocalStorage } from "./hooks/useLocalStorage";
-import type { Provider } from "./types";
+import type { Provider, RefreshSection } from "./types";
 import { DEFAULT_MODEL } from "./types";
 
 const MIN_PANEL_WIDTH = 260;
@@ -124,6 +124,12 @@ export function App() {
         clearHistory();
         setActiveHistoryId(null);
     }, [clearHistory]);
+
+    const handleRefreshSection = useCallback(
+        (section: RefreshSection, currentTitle: string) =>
+            gen.refreshSection(section, currentTitle, handleUpdateResult, activeModel, provider),
+        [gen.refreshSection, handleUpdateResult, activeModel, provider],
+    );
 
     const handleNewSong = useCallback(() => {
         lastSavedResult.current = null;
@@ -278,6 +284,8 @@ export function App() {
                                     genres={gen.builderInputs.genres}
                                     onUpdateResult={handleUpdateResult}
                                     onSaveStyle={handleSaveStyle}
+                                    onRefreshSection={handleRefreshSection}
+                                    refreshing={gen.refreshing}
                                 />
                             </div>
                         </>

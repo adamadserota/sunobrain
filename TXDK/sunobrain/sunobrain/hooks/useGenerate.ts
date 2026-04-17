@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { generateSong } from "../services/apiClient";
+import { generateSong, refreshSection as refreshSectionApi } from "../services/apiClient";
 import type {
     TopMode,
     FlowType,
@@ -8,6 +8,7 @@ import type {
     GenerateMode,
     BuilderInputs,
     Provider,
+    RefreshSection,
 } from "../types";
 
 const EMPTY_BUILDER: BuilderInputs = {
@@ -63,6 +64,14 @@ interface UseGenerateReturn {
     loadResult: (result: GenerateResponse) => void;
     generate: (apiKey: string, model?: string, provider?: Provider) => Promise<void>;
     optimize: (apiKey: string, model?: string, provider?: Provider) => Promise<void>;
+    refreshSection: (
+        section: RefreshSection,
+        currentTitle: string,
+        onPatch: (patch: Partial<GenerateResponse>) => void,
+        model?: string,
+        provider?: Provider,
+    ) => Promise<void>;
+    refreshing: RefreshSection | null;
     cancel: () => void;
     reset: () => void;
 }
@@ -77,7 +86,9 @@ export function useGenerate(): UseGenerateReturn {
     const [result, setResult] = useState<GenerateResponse | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [refreshing, setRefreshing] = useState<RefreshSection | null>(null);
     const abortRef = useRef<AbortController | null>(null);
+    const refreshAbortRef = useRef<AbortController | null>(null);
 
     const updateBuilderField = useCallback(
         <K extends keyof BuilderInputs>(field: K, value: BuilderInputs[K]) => {
@@ -170,15 +181,76 @@ export function useGenerate(): UseGenerateReturn {
         [draft],
     );
 
+    const refreshSection = useCallback(
+        async (
+            section: RefreshSection,
+            currentTitle: string,
+            onPatch: (patch: Partial<GenerateResponse>) => void,
+            model?: string,
+            provider?: Provider,
+        ) => {
+            if (!result) return;
+            const originalInput =
+                topMode === "oneshot" ? input : compileBuilderInput(builderInputs);
+            setRefreshing(section);
+            setError(null);
+            const controller = new AbortController();
+            refreshAbortRef.current = controller;
+            try {
+                const res = await refreshSectionApi({
+                    section,
+                    current: result,
+                    currentTitle,
+                    originalInput,
+                    model,
+                    provider,
+                    signal: controller.signal,
+                });
+                if (section === "title") {
+                    const newTitle = (res.title || "").trim();
+                    if (newTitle) {
+                        const updated = result.lyrics.replace(
+                            /\[Title:\s*(.+?)\]/i,
+                            `[Title: ${newTitle}]`,
+                        );
+                        onPatch({ lyrics: updated });
+                    }
+                } else if (section === "styles") {
+                    if (res.styles) onPatch({ styles: res.styles });
+                } else if (section === "exclude") {
+                    if (res.exclude_styles) onPatch({ exclude_styles: res.exclude_styles });
+                } else {
+                    if (res.lyrics) {
+                        onPatch({ lyrics: res.lyrics, plain_lyrics: res.plain_lyrics });
+                    }
+                }
+            } catch (e) {
+                if (e instanceof DOMException && e.name === "AbortError") {
+                    setError("Refresh cancelled");
+                } else {
+                    setError(e instanceof Error ? e.message : "Refresh failed");
+                }
+            } finally {
+                if (refreshAbortRef.current === controller) refreshAbortRef.current = null;
+                setRefreshing(null);
+            }
+        },
+        [result, topMode, input, builderInputs],
+    );
+
     const cancel = useCallback(() => {
         abortRef.current?.abort();
         abortRef.current = null;
+        refreshAbortRef.current?.abort();
+        refreshAbortRef.current = null;
     }, []);
 
     useEffect(() => {
         return () => {
             abortRef.current?.abort();
             abortRef.current = null;
+            refreshAbortRef.current?.abort();
+            refreshAbortRef.current = null;
         };
     }, []);
 
@@ -224,6 +296,8 @@ export function useGenerate(): UseGenerateReturn {
         loadResult,
         generate,
         optimize,
+        refreshSection,
+        refreshing,
         cancel,
         reset,
     };

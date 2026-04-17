@@ -35,7 +35,13 @@ export type GenerateMode =
     | "theme_draft"
     | "optimize_draft"
     | "builder_oneshot"
-    | "builder_draft";
+    | "builder_draft"
+    | "refresh_title"
+    | "refresh_styles"
+    | "refresh_exclude"
+    | "refresh_lyrics";
+
+export type RefreshSection = "title" | "styles" | "exclude" | "lyrics";
 export type GenerateStep = "input" | "draft_review" | "complete";
 
 export interface BuilderInputs {
@@ -68,6 +74,7 @@ export interface GenerateResponse {
     lyrics: string;
     plain_lyrics: string;
     analysis: AnalysisOutput;
+    title?: string;
 }
 
 export interface AlbumCoverResponse {

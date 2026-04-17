@@ -9,7 +9,7 @@ import { AnalysisSection } from "./AnalysisSection";
 import { PlainLyricsOutput } from "./PlainLyricsOutput";
 import { AlbumCover } from "./AlbumCover";
 import { LoadingAnimation } from "./LoadingAnimation";
-import type { GenerateResponse } from "../types";
+import type { GenerateResponse, RefreshSection } from "../types";
 import type { SaveStyleParams } from "../hooks/useSavedStyles";
 
 function buildSunoBlock(result: GenerateResponse): string {
@@ -144,6 +144,8 @@ interface OutputPanelProps {
     genres?: string[];
     onUpdateResult?: (patch: Partial<GenerateResponse>) => void;
     onSaveStyle?: (params: SaveStyleParams) => string | null;
+    onRefreshSection?: (section: RefreshSection, currentTitle: string) => Promise<void>;
+    refreshing?: RefreshSection | null;
 }
 
 export function OutputPanel({
@@ -152,6 +154,8 @@ export function OutputPanel({
     genres,
     onUpdateResult,
     onSaveStyle,
+    onRefreshSection,
+    refreshing,
 }: OutputPanelProps) {
     const [copiedAll, setCopiedAll] = useState(false);
 
@@ -230,10 +234,14 @@ export function OutputPanel({
             <SongTitle
                 value={songTitle}
                 onChange={onUpdateResult ? handleTitleChange : undefined}
+                onRefresh={onRefreshSection ? () => onRefreshSection("title", songTitle) : undefined}
+                refreshing={refreshing === "title"}
             />
             <LyricsOutput
                 value={result.lyrics}
                 onChange={onUpdateResult ? handleLyricsChange : undefined}
+                onRefresh={onRefreshSection ? () => onRefreshSection("lyrics", songTitle) : undefined}
+                refreshing={refreshing === "lyrics"}
             />
             <StyleOutput
                 value={result.styles}
@@ -241,10 +249,14 @@ export function OutputPanel({
                 genres={genres}
                 onChange={onUpdateResult ? handleStylesChange : undefined}
                 onSaveStyle={onSaveStyle}
+                onRefresh={onRefreshSection ? () => onRefreshSection("styles", songTitle) : undefined}
+                refreshing={refreshing === "styles"}
             />
             <ExcludeOutput
                 value={result.exclude_styles}
                 onChange={onUpdateResult ? handleExcludeChange : undefined}
+                onRefresh={onRefreshSection ? () => onRefreshSection("exclude", songTitle) : undefined}
+                refreshing={refreshing === "exclude"}
             />
             <AnalysisSection analysis={result.analysis} />
             <PlainLyricsOutput value={result.plain_lyrics} />

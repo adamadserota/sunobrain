@@ -1,4 +1,4 @@
-import type { GenerateMode, GenerateResponse, AlbumCoverResponse, Provider } from "../types";
+import type { GenerateMode, GenerateResponse, AlbumCoverResponse, Provider, RefreshSection } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
@@ -51,6 +51,50 @@ export async function generateSong(params: {
             body: JSON.stringify({
                 mode: params.mode,
                 input: params.input,
+                model: params.model || "gemini-2.5-pro",
+                provider: params.provider || "gemini",
+            }),
+        },
+        params.signal,
+    );
+}
+
+const REFRESH_MODE: Record<RefreshSection, GenerateMode> = {
+    title: "refresh_title",
+    styles: "refresh_styles",
+    exclude: "refresh_exclude",
+    lyrics: "refresh_lyrics",
+};
+
+export async function refreshSection(params: {
+    section: RefreshSection;
+    current: GenerateResponse;
+    currentTitle: string;
+    originalInput: string;
+    model?: string;
+    provider?: Provider;
+    signal?: AbortSignal;
+}): Promise<GenerateResponse> {
+    const ctx = [
+        "---CURRENT_TITLE---",
+        params.currentTitle || "(none)",
+        "---CURRENT_STYLES---",
+        params.current.styles || "(none)",
+        "---CURRENT_EXCLUDE---",
+        params.current.exclude_styles || "(none)",
+        "---CURRENT_LYRICS---",
+        params.current.lyrics || "(none)",
+        "---ORIGINAL_INPUT---",
+        params.originalInput || "(none)",
+    ].join("\n");
+
+    return apiFetch<GenerateResponse>(
+        `${API_BASE}/api/generate`,
+        {
+            method: "POST",
+            body: JSON.stringify({
+                mode: REFRESH_MODE[params.section],
+                input: ctx,
                 model: params.model || "gemini-2.5-pro",
                 provider: params.provider || "gemini",
             }),

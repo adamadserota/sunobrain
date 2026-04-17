@@ -175,9 +175,11 @@ interface StyleOutputProps {
     genres?: string[];
     onChange?: (newStyles: string) => void;
     onSaveStyle?: (params: SaveStyleParams) => string | null;
+    onRefresh?: () => void;
+    refreshing?: boolean;
 }
 
-export function StyleOutput({ value, excludeStyles, genres, onChange, onSaveStyle }: StyleOutputProps) {
+export function StyleOutput({ value, excludeStyles, genres, onChange, onSaveStyle, onRefresh, refreshing }: StyleOutputProps) {
     const [saving, setSaving] = useState(false);
     const [styleName, setStyleName] = useState("");
     const [validationError, setValidationError] = useState<string | null>(null);
@@ -224,6 +226,16 @@ export function StyleOutput({ value, excludeStyles, genres, onChange, onSaveStyl
 
     const headerRight = value ? (
         <div css={headerActionsStyle}>
+            {onRefresh && !editing && (
+                <button
+                    css={editBtnStyle}
+                    onClick={onRefresh}
+                    disabled={refreshing}
+                    title="Regenerate style prompt"
+                >
+                    {refreshing ? "\u21BB \u2026" : "\u21BB Refresh"}
+                </button>
+            )}
             {onSaveStyle && !editing && (
                 <button css={saveButtonStyle} onClick={() => setSaving(true)}>
                     Save
