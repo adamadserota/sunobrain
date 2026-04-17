@@ -29,9 +29,9 @@ export class ErrorBoundary extends Component<Props, State> {
                 <div
                     style={{
                         padding: 32,
-                        color: "#FF3333",
-                        fontFamily: "'Chakra Petch', sans-serif",
-                        background: "#00111A",
+                        color: "#F87171",
+                        fontFamily: "'Nunito', sans-serif",
+                        background: "#020617",
                         height: "100vh",
                         display: "flex",
                         flexDirection: "column",
@@ -40,18 +40,21 @@ export class ErrorBoundary extends Component<Props, State> {
                         gap: 16,
                     }}
                 >
-                    <h2 style={{ color: "#F5F5F5" }}>Something went wrong</h2>
-                    <pre style={{ color: "#FF3333", fontSize: 14 }}>
+                    <h2 style={{ color: "#F1F5F9" }}>Something went wrong</h2>
+                    <pre style={{ color: "#F87171", fontSize: 14 }}>
                         {this.state.error?.message}
                     </pre>
                     <button
                         onClick={() => this.setState({ hasError: false, error: null })}
                         style={{
                             background: "transparent",
-                            border: "1px solid #33FFFF",
-                            color: "#33FFFF",
+                            border: "1px solid #D4AF37",
+                            color: "#D4AF37",
                             padding: "8px 24px",
-                            fontFamily: "'Chakra Petch', sans-serif",
+                            fontFamily: "'Nunito', sans-serif",
+                            fontWeight: 700,
+                            letterSpacing: "2px",
+                            borderRadius: "9999px",
                             cursor: "pointer",
                         }}
                     >

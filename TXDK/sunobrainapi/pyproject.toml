@@ -1,13 +1,14 @@
 [project]
 name = "sunobrainapi"
 version = "1.0.0"
-description = "SunoBrain API — Suno v5.5 lyric optimization engine powered by Gemini"
+description = "SunoBrain API — Suno v5.5 lyric optimization engine powered by Gemini or DeepSeek"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.135.0",
     "uvicorn>=0.34.0",
     "pydantic>=2.0.0",
     "google-genai>=1.0.0",
+    "httpx>=0.27.0",
 ]
 
 [tool.ruff]

@@ -1,18 +1,7 @@
-/** @jsxImportSource @emotion/react */
-import { css } from "@emotion/react";
 import { TopModeToggle } from "./TopModeToggle";
 import { OneshotPanel } from "./OneshotPanel";
 import { BuilderPanel } from "./BuilderPanel";
 import type { TopMode, FlowType, GenerateStep, BuilderInputs, SavedStyle } from "../types";
-
-const panelStyle = css({
-    display: "flex",
-    flexDirection: "column",
-    gap: "var(--fui-spacing-3)",
-    padding: "var(--fui-spacing-3)",
-    height: "100%",
-    overflow: "auto",
-});
 
 interface InputPanelProps {
     topMode: TopMode;
@@ -31,6 +20,7 @@ interface InputPanelProps {
     onDraftChange: (value: string) => void;
     onGenerate: () => void;
     onOptimize: () => void;
+    onCancel: () => void;
     onReset: () => void;
     onInjectStyle: (styleText: string) => void;
     onRenameStyle: (id: string, newName: string) => string | null;
@@ -54,13 +44,14 @@ export function InputPanel({
     onDraftChange,
     onGenerate,
     onOptimize,
+    onCancel,
     onReset,
     onInjectStyle,
     onRenameStyle,
     onDeleteStyle,
 }: InputPanelProps) {
     return (
-        <div css={panelStyle}>
+        <div className="flex flex-col gap-4 p-4 h-full overflow-auto">
             <TopModeToggle topMode={topMode} onChange={onTopModeChange} />
 
             {topMode === "oneshot" ? (
@@ -71,6 +62,7 @@ export function InputPanel({
                     error={error}
                     onInputChange={onInputChange}
                     onGenerate={onGenerate}
+                    onCancel={onCancel}
                     onReset={onReset}
                 />
             ) : (
@@ -87,6 +79,7 @@ export function InputPanel({
                     onDraftChange={onDraftChange}
                     onGenerate={onGenerate}
                     onOptimize={onOptimize}
+                    onCancel={onCancel}
                     onReset={onReset}
                     onInjectStyle={onInjectStyle}
                     onRenameStyle={onRenameStyle}

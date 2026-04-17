@@ -97,10 +97,9 @@ interface AlbumCoverProps {
     plainLyrics: string;
     songTitle: string;
     styles: string;
-    apiKey: string;
 }
 
-export function AlbumCover({ plainLyrics, songTitle, styles, apiKey }: AlbumCoverProps) {
+export function AlbumCover({ plainLyrics, songTitle, styles }: AlbumCoverProps) {
     const [compositeDataUrl, setCompositeDataUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -115,7 +114,6 @@ export function AlbumCover({ plainLyrics, songTitle, styles, apiKey }: AlbumCove
                 plainLyrics,
                 songTitle,
                 styles,
-                apiKey,
             });
 
             setStep("compositing");
@@ -133,7 +131,7 @@ export function AlbumCover({ plainLyrics, songTitle, styles, apiKey }: AlbumCove
         } finally {
             setLoading(false);
         }
-    }, [plainLyrics, songTitle, styles, apiKey]);
+    }, [plainLyrics, songTitle, styles]);
 
     const handleDownload = useCallback(() => {
         if (!compositeDataUrl) return;

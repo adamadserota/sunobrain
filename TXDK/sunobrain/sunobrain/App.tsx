@@ -1,190 +1,69 @@
-/** @jsxImportSource @emotion/react */
-import { css } from "@emotion/react";
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { Settings, History, Plus } from "lucide-react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { InputPanel } from "./components/InputPanel";
 import { OutputPanel } from "./components/OutputPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { HistoryDrawer } from "./components/HistoryDrawer";
 import { useGenerate } from "./hooks/useGenerate";
 import { useSavedStyles } from "./hooks/useSavedStyles";
+import { useSongHistory } from "./hooks/useSongHistory";
 import { useLocalStorage } from "./hooks/useLocalStorage";
+import type { Provider } from "./types";
+import { DEFAULT_MODEL } from "./types";
 
 const MIN_PANEL_WIDTH = 260;
 const DEFAULT_PANEL_WIDTH = 420;
 const COLLAPSED_WIDTH = 40;
 
-const layoutStyle = css({
-    display: "flex",
-    flexDirection: "column",
-    height: "100vh",
-    overflow: "hidden",
-});
-
-const headerStyle = css({
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "var(--fui-spacing-2) var(--fui-spacing-3)",
-    borderBottom: "1px solid var(--fui-border)",
-    background: "var(--fui-bg-section)",
-});
-
-const logoStyle = css({
-    fontFamily: "var(--fui-font)",
-    fontSize: "15px",
-    fontWeight: 700,
-    letterSpacing: "2px",
-    textTransform: "uppercase",
-    color: "var(--fui-primary-100)",
-});
-
-const subtitleStyle = css({
-    fontFamily: "var(--fui-font)",
-    fontSize: "11px",
-    color: "var(--fui-text-muted)",
-    letterSpacing: "0.5px",
-    marginLeft: "var(--fui-spacing-2)",
-});
-
-const gearButtonStyle = css({
-    background: "transparent",
-    border: "1px solid var(--fui-border)",
-    color: "var(--fui-text-muted)",
-    width: 36,
-    height: 36,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    fontSize: "18px",
-    transition: "all 0.15s ease",
-    "&:hover": {
-        borderColor: "var(--fui-primary-100)",
-        color: "var(--fui-primary-100)",
-    },
-});
-
-const mainStyle = css({
-    display: "flex",
-    flex: 1,
-    overflow: "hidden",
-    minHeight: 0,
-});
-
-const inputWrapperStyle = css({
-    position: "relative",
-    overflow: "hidden",
-    transition: "width 0.2s ease",
-    flexShrink: 0,
-});
-
-const collapsedStyle = css({
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    height: "100%",
-    cursor: "pointer",
-    "&:hover": {
-        background: "var(--fui-bg-hover)",
-    },
-});
-
-const collapseToggleStyle = css({
-    writingMode: "vertical-rl",
-    fontFamily: "var(--fui-font)",
-    fontSize: "11px",
-    fontWeight: 600,
-    letterSpacing: "1.5px",
-    textTransform: "uppercase",
-    color: "var(--fui-primary-60)",
-    userSelect: "none",
-});
-
-const resizeHandleStyle = css({
-    position: "absolute",
-    top: 0,
-    right: 0,
-    width: 5,
-    height: "100%",
-    cursor: "col-resize",
-    background: "var(--fui-border)",
-    zIndex: 10,
-    transition: "background 0.15s ease",
-    "&:hover, &:active": {
-        background: "var(--fui-primary-60)",
-    },
-});
-
-const collapseButtonStyle = css({
-    position: "absolute",
-    top: 8,
-    right: 10,
-    background: "var(--fui-bg-section)",
-    border: "1px solid var(--fui-border)",
-    color: "var(--fui-text-muted)",
-    width: 24,
-    height: 24,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    fontSize: "12px",
-    zIndex: 11,
-    transition: "all 0.15s ease",
-    "&:hover": {
-        borderColor: "var(--fui-primary-100)",
-        color: "var(--fui-primary-100)",
-    },
-});
-
-const outputWrapperStyle = css({
-    flex: 1,
-    overflow: "hidden",
-    minWidth: 0,
-});
-
-const noKeyBanner = css({
-    padding: "var(--fui-spacing-2) var(--fui-spacing-3)",
-    background: "rgba(255, 129, 51, 0.1)",
-    borderBottom: "1px solid var(--fui-warning-100)",
-    fontFamily: "var(--fui-font)",
-    fontSize: "12px",
-    color: "var(--fui-warning-100)",
-    textAlign: "center",
-    cursor: "pointer",
-    "&:hover": {
-        background: "rgba(255, 129, 51, 0.15)",
-    },
-});
-
 export function App() {
-    const [apiKey, setApiKey] = useLocalStorage(
-        "sunobrain-api-key",
-        import.meta.env.VITE_GEMINI_API_KEY || "",
+    const [provider, setProvider] = useLocalStorage<Provider>("sunobrain-provider", "gemini");
+    const [geminiModel, setGeminiModel] = useLocalStorage(
+        "sunobrain-gemini-model",
+        DEFAULT_MODEL.gemini,
     );
-    const [model, setModel] = useLocalStorage("sunobrain-model", "gemini-3.1-pro-preview");
+    const [deepseekModel, setDeepseekModel] = useLocalStorage(
+        "sunobrain-deepseek-model",
+        DEFAULT_MODEL.deepseek,
+    );
+
+    const activeModel = provider === "deepseek" ? deepseekModel : geminiModel;
+    const setActiveModel = provider === "deepseek" ? setDeepseekModel : setGeminiModel;
+
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [historyOpen, setHistoryOpen] = useState(false);
     const [panelWidth, setPanelWidth] = useLocalStorage("sunobrain-panel-width", DEFAULT_PANEL_WIDTH);
     const [collapsed, setCollapsed] = useState(false);
     const dragging = useRef(false);
 
     const gen = useGenerate();
     const { savedStyles, saveStyle, renameStyle, deleteStyle } = useSavedStyles();
+    const { history, addEntry, updateEntry, deleteEntry, clearHistory } = useSongHistory();
+
+    const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
+    const lastSavedResult = useRef<typeof gen.result>(null);
+
+    useEffect(() => {
+        if (
+            gen.result &&
+            gen.step === "complete" &&
+            !gen.loading &&
+            gen.result !== lastSavedResult.current &&
+            gen.result.lyrics
+        ) {
+            lastSavedResult.current = gen.result;
+            void addEntry(gen.result).then((id) => {
+                if (id) setActiveHistoryId(id);
+            });
+        }
+    }, [gen.result, gen.step, gen.loading, addEntry]);
 
     const handleGenerate = () => {
-        if (!apiKey) {
-            setSettingsOpen(true);
-            return;
-        }
-        gen.generate(apiKey, model);
+        gen.generate("", activeModel, provider);
     };
 
     const handleOptimize = () => {
-        if (!apiKey) {
-            setSettingsOpen(true);
-            return;
-        }
-        gen.optimize(apiKey, model);
+        gen.optimize("", activeModel, provider);
     };
 
     const handleInjectStyle = useCallback(
@@ -193,6 +72,64 @@ export function App() {
         },
         [gen.updateBuilderField],
     );
+
+    const pendingPatchRef = useRef<Parameters<typeof gen.updateResult>[0] | null>(null);
+    const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const handleUpdateResult = useCallback(
+        (patch: Parameters<typeof gen.updateResult>[0]) => {
+            gen.updateResult(patch);
+            if (!activeHistoryId) return;
+            pendingPatchRef.current = { ...pendingPatchRef.current, ...patch };
+            if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+            saveTimerRef.current = setTimeout(() => {
+                const merged = pendingPatchRef.current;
+                pendingPatchRef.current = null;
+                saveTimerRef.current = null;
+                if (merged) updateEntry(activeHistoryId, merged);
+            }, 600);
+        },
+        [gen.updateResult, activeHistoryId, updateEntry],
+    );
+
+    useEffect(() => {
+        return () => {
+            if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        };
+    }, []);
+
+    const handleSelectHistory = useCallback(
+        (id: string) => {
+            const entry = history.find((e) => e.id === id);
+            if (!entry) return;
+            lastSavedResult.current = entry.result;
+            gen.loadResult(entry.result);
+            setActiveHistoryId(id);
+            setHistoryOpen(false);
+        },
+        [history, gen.loadResult],
+    );
+
+    const handleDeleteHistory = useCallback(
+        (id: string) => {
+            deleteEntry(id);
+            if (activeHistoryId === id) {
+                setActiveHistoryId(null);
+            }
+        },
+        [deleteEntry, activeHistoryId],
+    );
+
+    const handleClearHistory = useCallback(() => {
+        clearHistory();
+        setActiveHistoryId(null);
+    }, [clearHistory]);
+
+    const handleNewSong = useCallback(() => {
+        lastSavedResult.current = null;
+        setActiveHistoryId(null);
+        gen.reset();
+    }, [gen.reset]);
 
     const handleMouseDown = useCallback(
         (e: React.MouseEvent) => {
@@ -225,47 +162,128 @@ export function App() {
         [panelWidth, setPanelWidth],
     );
 
-    // Only show save style in Builder mode
     const handleSaveStyle = gen.topMode === "builder" ? saveStyle : undefined;
+
+    const hasOutput = gen.step === "complete" && gen.result !== null;
+    const showSplit = hasOutput || gen.loading;
 
     return (
         <ErrorBoundary>
-            <div css={layoutStyle}>
-                <header css={headerStyle}>
-                    <div>
-                        <span css={logoStyle}>SunoBrain</span>
-                        <span css={subtitleStyle}>Suno v5.5 Production Studio</span>
+            <div className="flex flex-col h-screen overflow-hidden bg-obsidian-900">
+                <header className="flex justify-between items-center px-6 py-3 border-b border-obsidian-border bg-obsidian-surface/80 backdrop-blur-xl">
+                    <div className="flex items-baseline gap-3">
+                        <span className="font-display text-2xl tracking-wider text-intel-primary-400 drop-shadow-[0_0_12px_rgba(212,175,55,0.25)]">
+                            SUNOBRAIN
+                        </span>
+                        <span className="text-xs text-slate-500 uppercase tracking-widest font-semibold">
+                            Suno v5.5 Production Studio
+                        </span>
                     </div>
-                    <button css={gearButtonStyle} onClick={() => setSettingsOpen(true)}>
-                        &#9881;
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {hasOutput && (
+                            <button
+                                type="button"
+                                onClick={handleNewSong}
+                                className="h-9 px-3 rounded-full border border-obsidian-border text-slate-400 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider transition-all duration-200 hover:border-intel-primary-500 hover:text-intel-primary-400 hover:bg-intel-primary-950/30"
+                                aria-label="New song"
+                            >
+                                <Plus size={14} />
+                                New
+                            </button>
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => setHistoryOpen(true)}
+                            className="relative h-9 w-9 rounded-full border border-obsidian-border text-slate-400 flex items-center justify-center transition-all duration-200 hover:border-intel-primary-500 hover:text-intel-primary-400 hover:bg-intel-primary-950/30"
+                            aria-label="History"
+                        >
+                            <History size={16} />
+                            {history.length > 0 && (
+                                <span className="absolute -top-1 -right-1 h-4 min-w-[16px] px-1 rounded-full bg-intel-primary-500 text-obsidian text-[10px] font-bold flex items-center justify-center">
+                                    {history.length}
+                                </span>
+                            )}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setSettingsOpen(true)}
+                            className="h-9 w-9 rounded-full border border-obsidian-border text-slate-400 flex items-center justify-center transition-all duration-200 hover:border-intel-primary-500 hover:text-intel-primary-400 hover:bg-intel-primary-950/30"
+                            aria-label="Settings"
+                        >
+                            <Settings size={16} />
+                        </button>
+                    </div>
                 </header>
 
-                {!apiKey && (
-                    <div css={noKeyBanner} onClick={() => setSettingsOpen(true)}>
-                        No API key set — click here or the gear icon to configure your Gemini API
-                        key
-                    </div>
-                )}
-
-                <main css={mainStyle}>
-                    <div
-                        css={inputWrapperStyle}
-                        style={{ width: collapsed ? COLLAPSED_WIDTH : panelWidth }}
-                    >
-                        {collapsed ? (
-                            <div css={collapsedStyle} onClick={() => setCollapsed(false)}>
-                                <span css={collapseToggleStyle}>Input Panel</span>
+                <main className="flex flex-1 overflow-hidden min-h-0">
+                    {showSplit ? (
+                        <>
+                            <div
+                                className="relative overflow-hidden flex-shrink-0 transition-[width] duration-200 border-r border-obsidian-border bg-obsidian-900"
+                                style={{ width: collapsed ? COLLAPSED_WIDTH : panelWidth }}
+                            >
+                                {collapsed ? (
+                                    <div
+                                        onClick={() => setCollapsed(false)}
+                                        className="flex items-center justify-center h-full cursor-pointer hover:bg-obsidian-raised transition-colors"
+                                    >
+                                        <span className="[writing-mode:vertical-rl] text-xs font-bold tracking-widest uppercase text-intel-primary-500 select-none">
+                                            Input Panel
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <button
+                                            type="button"
+                                            onClick={() => setCollapsed(true)}
+                                            className="absolute top-2 right-3 z-[11] h-6 w-6 rounded-full bg-obsidian-raised border border-obsidian-border text-slate-400 flex items-center justify-center text-xs transition-all hover:border-intel-primary-500 hover:text-intel-primary-400"
+                                            title="Collapse panel"
+                                        >
+                                            ◀
+                                        </button>
+                                        <InputPanel
+                                            topMode={gen.topMode}
+                                            flow={gen.flow}
+                                            step={gen.step}
+                                            input={gen.input}
+                                            builderInputs={gen.builderInputs}
+                                            draft={gen.draft}
+                                            loading={gen.loading}
+                                            error={gen.error}
+                                            savedStyles={savedStyles}
+                                            onTopModeChange={gen.setTopMode}
+                                            onFlowChange={gen.setFlow}
+                                            onInputChange={gen.setInput}
+                                            onBuilderChange={gen.updateBuilderField}
+                                            onDraftChange={gen.setDraft}
+                                            onGenerate={handleGenerate}
+                                            onOptimize={handleOptimize}
+                                            onCancel={gen.cancel}
+                                            onReset={gen.reset}
+                                            onInjectStyle={handleInjectStyle}
+                                            onRenameStyle={renameStyle}
+                                            onDeleteStyle={deleteStyle}
+                                        />
+                                        <div
+                                            onMouseDown={handleMouseDown}
+                                            className="absolute top-0 right-0 w-1 h-full cursor-col-resize bg-obsidian-border z-10 transition-colors hover:bg-intel-primary-500 active:bg-intel-primary-500"
+                                        />
+                                    </>
+                                )}
                             </div>
-                        ) : (
-                            <>
-                                <button
-                                    css={collapseButtonStyle}
-                                    onClick={() => setCollapsed(true)}
-                                    title="Collapse panel"
-                                >
-                                    &#9664;
-                                </button>
+                            <div className="flex-1 overflow-hidden min-w-0 xiii-panel-enter">
+                                <OutputPanel
+                                    result={gen.result}
+                                    loading={gen.loading}
+                                    genres={gen.builderInputs.genres}
+                                    onUpdateResult={handleUpdateResult}
+                                    onSaveStyle={handleSaveStyle}
+                                />
+                            </div>
+                        </>
+                    ) : (
+                        <div className="flex-1 overflow-y-auto">
+                            <div className="max-w-3xl mx-auto w-full px-6 py-6">
                                 <InputPanel
                                     topMode={gen.topMode}
                                     flow={gen.flow}
@@ -283,36 +301,36 @@ export function App() {
                                     onDraftChange={gen.setDraft}
                                     onGenerate={handleGenerate}
                                     onOptimize={handleOptimize}
+                                    onCancel={gen.cancel}
                                     onReset={gen.reset}
                                     onInjectStyle={handleInjectStyle}
                                     onRenameStyle={renameStyle}
                                     onDeleteStyle={deleteStyle}
                                 />
-                                <div css={resizeHandleStyle} onMouseDown={handleMouseDown} />
-                            </>
-                        )}
-                    </div>
-                    <div css={outputWrapperStyle}>
-                        <OutputPanel
-                            result={gen.result}
-                            loading={gen.loading}
-                            apiKey={apiKey}
-                            genres={gen.builderInputs.genres}
-                            onUpdateResult={gen.updateResult}
-                            onSaveStyle={handleSaveStyle}
-                        />
-                    </div>
+                            </div>
+                        </div>
+                    )}
                 </main>
 
                 {settingsOpen && (
                     <SettingsPanel
-                        apiKey={apiKey}
-                        model={model}
-                        onApiKeyChange={setApiKey}
-                        onModelChange={setModel}
+                        provider={provider}
+                        model={activeModel}
+                        onProviderChange={setProvider}
+                        onModelChange={setActiveModel}
                         onClose={() => setSettingsOpen(false)}
                     />
                 )}
+
+                <HistoryDrawer
+                    open={historyOpen}
+                    history={history}
+                    activeId={activeHistoryId}
+                    onClose={() => setHistoryOpen(false)}
+                    onSelect={handleSelectHistory}
+                    onDelete={handleDeleteHistory}
+                    onClear={handleClearHistory}
+                />
             </div>
         </ErrorBoundary>
     );

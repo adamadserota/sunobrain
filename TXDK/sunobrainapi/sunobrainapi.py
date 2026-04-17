@@ -1,10 +1,18 @@
-"""SunoBrain API — Suno v5.5 lyric optimization engine powered by Gemini."""
+"""SunoBrain API — Suno v5.5 lyric optimization engine powered by Gemini or DeepSeek.
+
+API keys are read from env vars (GEMINI_API_KEY, DEEPSEEK_API_KEY). The
+`api_key` field on requests is ignored when env vars are set, allowed as a
+fallback for local dev when env vars are missing.
+"""
 
 import base64
 import logging
+import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Literal
 
+import httpx
 from google import genai
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +21,33 @@ from pydantic import BaseModel, Field
 
 from parser import parse_draft_response, parse_full_response
 from prompts import PROMPTS, ALBUM_COVER_PROMPT
+
+
+def _load_env_local() -> None:
+    """Load KEY=VALUE pairs from ./env.local into os.environ (no overwrite)."""
+    env_file = Path(__file__).parent / "env.local"
+    if not env_file.exists():
+        return
+    for raw in env_file.read_text().splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+_load_env_local()
+
+DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
+
+
+def _resolve_api_key(provider: str, request_key: str) -> str:
+    """Prefer env var; fall back to request-body key for local dev only."""
+    env_var = "DEEPSEEK_API_KEY" if provider == "deepseek" else "GEMINI_API_KEY"
+    return os.environ.get(env_var) or request_key
 
 logger = logging.getLogger("sunobrainapi")
 logging.basicConfig(level=logging.INFO)
@@ -28,8 +63,9 @@ class GenerateRequest(BaseModel):
         "builder_oneshot", "builder_draft",
     ]
     input: str = Field(..., min_length=1, max_length=10000)
-    api_key: str = Field(..., min_length=1)
-    model: str = Field(default="gemini-3.1-pro-preview")
+    api_key: str = Field(default="")  # ignored if env var is set
+    model: str = Field(default="gemini-2.5-pro")
+    provider: Literal["gemini", "deepseek"] = Field(default="gemini")
 
 
 class AnalysisOutput(BaseModel):
@@ -50,7 +86,7 @@ class AlbumCoverRequest(BaseModel):
     plain_lyrics: str = Field(..., min_length=1, max_length=10000)
     song_title: str = Field(default="UNTITLED")
     styles: str = Field(default="")
-    api_key: str = Field(..., min_length=1)
+    api_key: str = Field(default="")  # ignored if env var is set
     model: str = Field(default="imagen-4.0-ultra-generate-001")
 
 
@@ -118,28 +154,90 @@ async def health():
     return {"status": "ok", "service": "sunobrainapi"}
 
 
+async def _call_gemini(api_key: str, model: str, system_prompt: str, user_input: str) -> str:
+    client = genai.Client(api_key=api_key)
+    response = client.models.generate_content(
+        model=model,
+        contents=user_input,
+        config=genai.types.GenerateContentConfig(
+            system_instruction=system_prompt,
+        ),
+    )
+    return response.text
+
+
+async def _call_deepseek(api_key: str, model: str, system_prompt: str, user_input: str) -> str:
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_input},
+        ],
+        "stream": False,
+    }
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        response = await client.post(DEEPSEEK_URL, headers=headers, json=payload)
+
+    if response.status_code == 401:
+        raise HTTPException(status_code=401, detail="Invalid DeepSeek API key")
+    if response.status_code == 402:
+        raise HTTPException(
+            status_code=402,
+            detail="DeepSeek: insufficient balance for this model",
+        )
+    if response.status_code >= 400:
+        try:
+            body = response.json()
+            msg = body.get("error", {}).get("message") or response.text
+        except Exception:
+            msg = response.text
+        raise HTTPException(status_code=502, detail=f"DeepSeek error: {msg}")
+
+    data = response.json()
+    try:
+        return data["choices"][0]["message"]["content"]
+    except (KeyError, IndexError) as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"DeepSeek returned unexpected response shape: {e}",
+        )
+
+
 @app.post("/api/generate", response_model=GenerateResponse)
 async def generate(req: GenerateRequest):
     system_prompt = PROMPTS.get(req.mode)
     if not system_prompt:
         raise HTTPException(status_code=400, detail=f"Unknown mode: {req.mode}")
 
-    try:
-        client = genai.Client(api_key=req.api_key)
-        response = client.models.generate_content(
-            model=req.model,
-            contents=req.input,
-            config=genai.types.GenerateContentConfig(
-                system_instruction=system_prompt,
-            ),
+    api_key = _resolve_api_key(req.provider, req.api_key)
+    if not api_key:
+        env_var = "DEEPSEEK_API_KEY" if req.provider == "deepseek" else "GEMINI_API_KEY"
+        raise HTTPException(
+            status_code=500, detail=f"Server is missing {env_var} env var",
         )
-        raw_text = response.text
+
+    try:
+        if req.provider == "deepseek":
+            raw_text = await _call_deepseek(
+                api_key, req.model, system_prompt, req.input,
+            )
+        else:
+            raw_text = await _call_gemini(
+                api_key, req.model, system_prompt, req.input,
+            )
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = str(e)
         if "API key" in error_msg or "401" in error_msg or "403" in error_msg:
-            raise HTTPException(status_code=401, detail="Invalid Gemini API key")
-        logger.error(f"Gemini API error: {e}", exc_info=True)
-        raise HTTPException(status_code=502, detail=f"Gemini API error: {error_msg}")
+            provider_name = "DeepSeek" if req.provider == "deepseek" else "Gemini"
+            raise HTTPException(status_code=401, detail=f"Invalid {provider_name} API key")
+        logger.error(f"{req.provider} API error: {e}", exc_info=True)
+        raise HTTPException(status_code=502, detail=f"{req.provider} API error: {error_msg}")
 
     if req.mode in ("theme_draft", "builder_draft"):
         parsed = parse_draft_response(raw_text)
@@ -162,8 +260,14 @@ async def album_cover(req: AlbumCoverRequest):
         styles=req.styles[:500] if req.styles else "cinematic, moody, atmospheric",
     )
 
+    api_key = _resolve_api_key("gemini", req.api_key)
+    if not api_key:
+        raise HTTPException(
+            status_code=500, detail="Server is missing GEMINI_API_KEY env var",
+        )
+
     try:
-        client = genai.Client(api_key=req.api_key)
+        client = genai.Client(api_key=api_key)
         response = client.models.generate_images(
             model=req.model,
             prompt=prompt,

@@ -37,3 +37,6 @@ venv
 # Vercel
 .vercel
 
+# Claude Code local config
+.claude/
+

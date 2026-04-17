@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { generateSong } from "../services/apiClient";
 import type {
     TopMode,
@@ -7,6 +7,7 @@ import type {
     GenerateResponse,
     GenerateMode,
     BuilderInputs,
+    Provider,
 } from "../types";
 
 const EMPTY_BUILDER: BuilderInputs = {
@@ -59,8 +60,10 @@ interface UseGenerateReturn {
     updateBuilderField: <K extends keyof BuilderInputs>(field: K, value: BuilderInputs[K]) => void;
     setDraft: (draft: string) => void;
     updateResult: (patch: Partial<GenerateResponse>) => void;
-    generate: (apiKey: string, model?: string) => Promise<void>;
-    optimize: (apiKey: string, model?: string) => Promise<void>;
+    loadResult: (result: GenerateResponse) => void;
+    generate: (apiKey: string, model?: string, provider?: Provider) => Promise<void>;
+    optimize: (apiKey: string, model?: string, provider?: Provider) => Promise<void>;
+    cancel: () => void;
     reset: () => void;
 }
 
@@ -74,6 +77,7 @@ export function useGenerate(): UseGenerateReturn {
     const [result, setResult] = useState<GenerateResponse | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const abortRef = useRef<AbortController | null>(null);
 
     const updateBuilderField = useCallback(
         <K extends keyof BuilderInputs>(field: K, value: BuilderInputs[K]) => {
@@ -83,7 +87,7 @@ export function useGenerate(): UseGenerateReturn {
     );
 
     const generate = useCallback(
-        async (apiKey: string, model?: string) => {
+        async (apiKey: string, model?: string, provider?: Provider) => {
             let apiMode: GenerateMode;
             let apiInput: string;
 
@@ -99,9 +103,18 @@ export function useGenerate(): UseGenerateReturn {
 
             setLoading(true);
             setError(null);
+            const controller = new AbortController();
+            abortRef.current = controller;
 
             try {
-                const res = await generateSong({ mode: apiMode, input: apiInput, apiKey, model });
+                const res = await generateSong({
+                    mode: apiMode,
+                    input: apiInput,
+                    apiKey,
+                    model,
+                    provider,
+                    signal: controller.signal,
+                });
 
                 if (apiMode === "builder_draft") {
                     setDraft(res.lyrics);
@@ -111,8 +124,13 @@ export function useGenerate(): UseGenerateReturn {
                     setStep("complete");
                 }
             } catch (e) {
-                setError(e instanceof Error ? e.message : "An unexpected error occurred");
+                if (e instanceof DOMException && e.name === "AbortError") {
+                    setError("Generation cancelled");
+                } else {
+                    setError(e instanceof Error ? e.message : "An unexpected error occurred");
+                }
             } finally {
+                if (abortRef.current === controller) abortRef.current = null;
                 setLoading(false);
             }
         },
@@ -120,10 +138,12 @@ export function useGenerate(): UseGenerateReturn {
     );
 
     const optimize = useCallback(
-        async (apiKey: string, model?: string) => {
+        async (apiKey: string, model?: string, provider?: Provider) => {
             if (!draft.trim()) return;
             setLoading(true);
             setError(null);
+            const controller = new AbortController();
+            abortRef.current = controller;
 
             try {
                 const res = await generateSong({
@@ -131,17 +151,36 @@ export function useGenerate(): UseGenerateReturn {
                     input: draft,
                     apiKey,
                     model,
+                    provider,
+                    signal: controller.signal,
                 });
                 setResult(res);
                 setStep("complete");
             } catch (e) {
-                setError(e instanceof Error ? e.message : "An unexpected error occurred");
+                if (e instanceof DOMException && e.name === "AbortError") {
+                    setError("Generation cancelled");
+                } else {
+                    setError(e instanceof Error ? e.message : "An unexpected error occurred");
+                }
             } finally {
+                if (abortRef.current === controller) abortRef.current = null;
                 setLoading(false);
             }
         },
         [draft],
     );
+
+    const cancel = useCallback(() => {
+        abortRef.current?.abort();
+        abortRef.current = null;
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            abortRef.current?.abort();
+            abortRef.current = null;
+        };
+    }, []);
 
     const updateResult = useCallback(
         (patch: Partial<GenerateResponse>) => {
@@ -149,6 +188,12 @@ export function useGenerate(): UseGenerateReturn {
         },
         [],
     );
+
+    const loadResult = useCallback((next: GenerateResponse) => {
+        setResult(next);
+        setStep("complete");
+        setError(null);
+    }, []);
 
     const reset = useCallback(() => {
         setStep("input");
@@ -176,8 +221,10 @@ export function useGenerate(): UseGenerateReturn {
         updateBuilderField,
         setDraft,
         updateResult,
+        loadResult,
         generate,
         optimize,
+        cancel,
         reset,
     };
 }
