@@ -1,47 +1,82 @@
-"""Vercel Serverless Function — /api/album-cover"""
+"""Vercel serverless function — POST /api/album-cover.
 
-import json
+Always routes to Google Imagen via Gemini — DeepSeek does not support image generation.
+The Gemini key comes from the GEMINI_API_KEY Vercel env var.
+"""
+
 import base64
-import sys
+import json
 import os
 from http.server import BaseHTTPRequestHandler
 
-sys.path.insert(0, os.path.dirname(__file__))
+# Inlined from former _prompts.py (avoids Vercel Python bundler dropping
+# underscore-prefixed helper modules during function packaging).
+_TEMPLATE = """\
+Generate album cover ARTWORK ONLY — no text, no typography, no letters, no logos, no watermarks.
 
-from _shared.prompts import ALBUM_COVER_PROMPT
+LYRICS (derive visual mood, imagery, and symbolism from these):
+{plain_lyrics}
+
+MUSICAL STYLE: {styles}
+
+ARTWORK REQUIREMENTS:
+- Create a massive, surreal central subject in the mid-ground, inspired by the lyrics
+- Natural landscape background with cinematic depth and atmosphere
+- The central subject should be surreal, high-contrast, and visually striking against the landscape
+- Adapt the color theme and aesthetic to match the emotional core of the lyrics
+- Dynamic textures: iridescent glass, bioluminescence, liquid gold, ethereal mist — whatever \
+fits the lyrics' mood
+- Rich, vibrant color palette with high contrast
+- Cinematic lighting, editorial quality, gallery-worthy composition
+- Leave the top ~15% of the image as slightly darker/simpler sky area (text will be overlaid later)
+- Leave the bottom ~12% slightly darker (branding will be overlaid later)
+- Square 1:1 aspect ratio composition
+- CRITICAL: Do NOT render ANY text, words, letters, typography, logos, or watermarks anywhere \
+in the image. The image must be purely visual artwork."""
+
+
+def _json_response(handler: BaseHTTPRequestHandler, status: int, body: dict) -> None:
+    handler.send_response(status)
+    handler.send_header("Content-Type", "application/json")
+    handler.send_header("Access-Control-Allow-Origin", "*")
+    handler.end_headers()
+    handler.wfile.write(json.dumps(body).encode("utf-8"))
 
 
 class handler(BaseHTTPRequestHandler):
-    def do_OPTIONS(self):
-        self.send_response(200)
-        self._cors_headers()
+    def do_OPTIONS(self):  # noqa: N802
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
-    def do_POST(self):
+    def do_POST(self):  # noqa: N802
         try:
-            content_length = int(self.headers.get("Content-Length", 0))
-            body = json.loads(self.rfile.read(content_length))
-        except Exception:
-            self._error(400, "Invalid JSON body")
+            length = int(self.headers.get("Content-Length", "0"))
+            body = json.loads(self.rfile.read(length).decode("utf-8"))
+        except (json.JSONDecodeError, ValueError):
+            _json_response(self, 400, {"detail": "Invalid JSON body"})
             return
 
-        plain_lyrics = body.get("plain_lyrics", "")
-        song_title = body.get("song_title", "UNTITLED")
-        styles = body.get("styles", "")
-        api_key = body.get("api_key", "")
+        plain_lyrics = (body.get("plain_lyrics") or "")[:2000]
+        styles = (body.get("styles") or "cinematic, moody, atmospheric")[:500]
         model = body.get("model", "imagen-4.0-ultra-generate-001")
 
-        if not plain_lyrics or len(plain_lyrics) > 10000:
-            self._error(400, "plain_lyrics must be 1-10000 characters")
-            return
-        if not api_key:
-            self._error(400, "api_key is required")
+        if not plain_lyrics:
+            _json_response(self, 400, {"detail": "plain_lyrics is required"})
             return
 
-        prompt = ALBUM_COVER_PROMPT.format(
-            plain_lyrics=plain_lyrics[:2000],
-            styles=styles[:500] if styles else "cinematic, moody, atmospheric",
-        )
+        api_key = os.environ.get("GEMINI_API_KEY", "")
+        if not api_key:
+            _json_response(
+                self,
+                500,
+                {"detail": "Server is missing GEMINI_API_KEY \u2014 set it in Vercel env vars"},
+            )
+            return
+
+        prompt = _TEMPLATE.format(plain_lyrics=plain_lyrics, styles=styles)
 
         try:
             from google import genai
@@ -55,40 +90,22 @@ class handler(BaseHTTPRequestHandler):
                     aspect_ratio="1:1",
                 ),
             )
-
             if not response.generated_images:
-                self._error(502, "No image was generated")
+                _json_response(self, 502, {"detail": "No image was generated"})
                 return
-
             image = response.generated_images[0].image
             image_b64 = base64.b64encode(image.image_bytes).decode("utf-8")
-
-            result = {
-                "image_base64": image_b64,
-                "mime_type": image.mime_type or "image/png",
-            }
-
-            self.send_response(200)
-            self._cors_headers()
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps(result).encode())
-
-        except Exception as e:
-            error_msg = str(e)
-            if "API key" in error_msg or "401" in error_msg or "403" in error_msg:
-                self._error(401, "Invalid Gemini API key")
-                return
-            self._error(502, f"Imagen API error: {error_msg}")
-
-    def _cors_headers(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Headers", "content-type")
-        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
-
-    def _error(self, status: int, detail: str):
-        self.send_response(status)
-        self._cors_headers()
-        self.send_header("Content-Type", "application/json")
-        self.end_headers()
-        self.wfile.write(json.dumps({"detail": detail}).encode())
+            _json_response(
+                self,
+                200,
+                {
+                    "image_base64": image_b64,
+                    "mime_type": image.mime_type or "image/png",
+                },
+            )
+        except Exception as e:  # noqa: BLE001
+            msg = str(e)
+            if "API key" in msg or "401" in msg or "403" in msg:
+                _json_response(self, 401, {"detail": "Invalid Gemini API key"})
+            else:
+                _json_response(self, 502, {"detail": f"Imagen API error: {msg}"})
