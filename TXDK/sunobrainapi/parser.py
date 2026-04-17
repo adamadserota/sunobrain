@@ -130,26 +130,12 @@ def _strip_to_plain(lyrics: str) -> str:
         if skip_patterns.match(stripped):
             continue
 
-        # Convert section tags like [Verse 1: Low-Register, Intimate] → "Verse 1:"
-        section_match = re.match(r"^\[([^\]]+)\]$", stripped)
-        if section_match:
-            tag_content = section_match.group(1)
-            # Extract just the section name (before the colon with descriptors)
-            section_name = tag_content.split(":")[0].strip()
-
-            # Check if it's a known section type
-            is_section = False
-            for key in _SECTION_LABELS:
-                if section_name.lower().startswith(key):
-                    is_section = True
-                    break
-
-            if is_section:
-                result.append(f"\n{section_name}:")
-                continue
-            else:
-                # Unknown bracketed tag (likely instrumental cue) — skip
-                continue
+        # Drop all bracketed tags including section labels (Verse/Chorus/Bridge/etc)
+        # and production cues. Keep a blank line for visual spacing between stanzas.
+        if re.match(r"^\[([^\]]+)\]$", stripped):
+            if result and result[-1] != "":
+                result.append("")
+            continue
 
         # Remove inline parenthetical backing vocals like (on asphalt black)
         cleaned = re.sub(r"\s*\([^)]*\)\s*", " ", stripped).strip()
