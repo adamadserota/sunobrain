@@ -61,7 +61,7 @@ class handler(BaseHTTPRequestHandler):
 
         plain_lyrics = (body.get("plain_lyrics") or "")[:2000]
         styles = (body.get("styles") or "cinematic, moody, atmospheric")[:500]
-        model = body.get("model", "imagen-4.0-generate-001")
+        model = body.get("model", "imagen-4.0-fast-generate-001")
 
         if not plain_lyrics:
             _json_response(self, 400, {"detail": "plain_lyrics is required"})
