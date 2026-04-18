@@ -89,7 +89,7 @@ class AlbumCoverRequest(BaseModel):
     song_title: str = Field(default="UNTITLED")
     styles: str = Field(default="")
     api_key: str = Field(default="")  # ignored if env var is set
-    model: str = Field(default="imagen-4.0-generate-preview-06-06")
+    model: str = Field(default="imagen-4.0-generate-001")
 
 
 class AlbumCoverResponse(BaseModel):
