@@ -39,21 +39,41 @@ const imageStyle = css({
     border: "1px solid var(--fui-border)",
 });
 
-const loadingStyle = css({
+const skeletonWrapStyle = css({
     display: "flex",
+    flexDirection: "column",
     alignItems: "center",
-    justifyContent: "center",
-    padding: "var(--fui-spacing-5)",
-    fontFamily: "var(--fui-font)",
-    fontSize: "13px",
-    color: "var(--fui-primary-80)",
+    gap: "var(--fui-spacing-3)",
+    padding: "var(--fui-spacing-3)",
+});
+
+const skeletonImageStyle = css({
+    width: "100%",
+    maxWidth: 500,
+    aspectRatio: "1 / 1",
     border: "1px solid var(--fui-primary-20)",
-    background: "var(--fui-primary-5)",
-    "@keyframes pulse": {
-        "0%, 100%": { opacity: 0.4 },
+    background:
+        "linear-gradient(110deg, var(--fui-primary-5) 30%, var(--fui-primary-20) 50%, var(--fui-primary-5) 70%)",
+    backgroundSize: "200% 100%",
+    "@keyframes shimmer": {
+        "0%": { backgroundPosition: "200% 0" },
+        "100%": { backgroundPosition: "-200% 0" },
+    },
+    animation: "shimmer 1.6s linear infinite",
+});
+
+const skeletonLabelStyle = css({
+    fontFamily: "var(--fui-font)",
+    fontSize: "11px",
+    fontWeight: 600,
+    letterSpacing: "1.5px",
+    textTransform: "uppercase",
+    color: "var(--fui-primary-80)",
+    "@keyframes pulseDim": {
+        "0%, 100%": { opacity: 0.5 },
         "50%": { opacity: 1 },
     },
-    animation: "pulse 1.5s ease-in-out infinite",
+    animation: "pulseDim 1.5s ease-in-out infinite",
 });
 
 const errorStyle = css({
@@ -162,10 +182,13 @@ export function AlbumCover({ plainLyrics, songTitle, styles }: AlbumCoverProps) 
             headerRight={headerButton}
         >
             {loading && (
-                <div css={loadingStyle}>
-                    {step === "generating"
-                        ? "Generating artwork with Imagen 4 Ultra..."
-                        : "Compositing typography overlay..."}
+                <div css={skeletonWrapStyle} aria-live="polite">
+                    <div css={skeletonImageStyle} aria-hidden />
+                    <span css={skeletonLabelStyle}>
+                        {step === "generating"
+                            ? "Generating artwork…"
+                            : "Compositing typography overlay…"}
+                    </span>
                 </div>
             )}
 

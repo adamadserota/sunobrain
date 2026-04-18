@@ -20,11 +20,13 @@ export function SettingsPanel({
 
     return (
         <div
-            className="fixed inset-0 z-[100] flex items-start justify-end p-16 pr-4 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] flex items-center justify-center sm:items-start sm:justify-end p-4 sm:p-16 sm:pr-4 bg-black/60 backdrop-blur-sm"
             onClick={onClose}
         >
             <div
-                className="card-osint w-[360px] p-6 flex flex-col gap-5 shadow-2xl rounded-2xl"
+                role="dialog"
+                aria-modal="true"
+                className="card-osint w-full max-w-[360px] p-6 flex flex-col gap-5 shadow-2xl rounded-2xl"
                 onClick={(e) => e.stopPropagation()}
             >
                 <h2 className="text-sm font-bold uppercase tracking-widest text-intel-primary-400">

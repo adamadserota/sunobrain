@@ -49,11 +49,22 @@ export function GenreSelector({ selected, onChange, disabled }: GenreSelectorPro
             <button
                 type="button"
                 onClick={() => !disabled && setOpen((o) => !o)}
+                onKeyDown={(e) => {
+                    if ((e.key === "ArrowDown" || e.key === "Enter") && !open) {
+                        e.preventDefault();
+                        setOpen(true);
+                    } else if (e.key === "Escape" && open) {
+                        setOpen(false);
+                    }
+                }}
                 disabled={disabled}
+                aria-haspopup="listbox"
+                aria-expanded={open}
+                aria-controls="genre-menu"
                 className={`w-full min-h-[44px] px-3 py-2 rounded-xl border bg-obsidian-raised text-left
                     text-sm text-slate-100 transition-colors
                     flex items-center gap-2 flex-wrap
-                    disabled:opacity-40 disabled:cursor-not-allowed
+                    disabled:opacity-60 disabled:cursor-not-allowed
                     ${open
                         ? "border-intel-primary-500 ring-1 ring-intel-primary-500/40"
                         : "border-obsidian-border hover:border-intel-primary-500/60"}`}
@@ -73,7 +84,13 @@ export function GenreSelector({ selected, onChange, disabled }: GenreSelectorPro
                                 tabIndex={0}
                                 aria-label={`Remove ${genre}`}
                                 onClick={(e) => removeChip(genre, e)}
-                                className="cursor-pointer opacity-60 hover:opacity-100 transition-opacity"
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        onChange(selected.filter((g) => g !== genre));
+                                    }
+                                }}
+                                className="cursor-pointer opacity-85 hover:opacity-100 transition-opacity focus:outline-none focus:ring-1 focus:ring-intel-primary-400 rounded-full"
                             >
                                 <X size={11} />
                             </span>
@@ -89,13 +106,21 @@ export function GenreSelector({ selected, onChange, disabled }: GenreSelectorPro
             </button>
 
             {open && !disabled && (
-                <div className="absolute top-full left-0 right-0 mt-1 z-50 max-h-64 overflow-y-auto
-                    rounded-xl border border-intel-primary-500/40 bg-obsidian-surface shadow-2xl shadow-black/60">
+                <div
+                    id="genre-menu"
+                    role="listbox"
+                    aria-multiselectable="true"
+                    aria-label="Genres"
+                    className="absolute top-full left-0 right-0 mt-1 z-50 max-h-64 overflow-y-auto
+                    rounded-xl border border-intel-primary-500/40 bg-obsidian-surface shadow-2xl shadow-black/60"
+                >
                     {GENRES.map((genre) => {
                         const isSelected = selected.includes(genre);
                         return (
                             <button
                                 type="button"
+                                role="option"
+                                aria-selected={isSelected}
                                 key={genre}
                                 onClick={() => toggle(genre)}
                                 className={`w-full flex items-center gap-3 px-3 py-2 text-sm text-left transition-colors

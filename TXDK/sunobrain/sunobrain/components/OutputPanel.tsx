@@ -53,6 +53,26 @@ const emptyStyle = css({
     padding: "var(--fui-spacing-6)",
 });
 
+const emptyCardStyle = css({
+    border: "1px dashed var(--fui-primary-40)",
+    background: "var(--fui-primary-5)",
+    borderRadius: 16,
+    padding: "var(--fui-spacing-5) var(--fui-spacing-4)",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "var(--fui-spacing-2)",
+    maxWidth: 420,
+});
+
+const emptyHintStyle = css({
+    fontSize: "12px",
+    color: "var(--fui-text-muted)",
+    letterSpacing: "1px",
+    textTransform: "uppercase",
+    marginTop: "var(--fui-spacing-2)",
+});
+
 const emptyTitle = css({
     fontSize: "18px",
     fontWeight: 700,
@@ -116,24 +136,20 @@ const copiedButtonStyle = css({
 });
 
 const toastStyle = css({
-    position: "fixed",
-    bottom: 24,
-    left: "50%",
-    transform: "translateX(-50%)",
-    padding: "10px 18px",
+    marginLeft: "var(--fui-spacing-2)",
+    padding: "6px 12px",
     background: "var(--fui-bg-section)",
     border: "1px solid var(--fui-primary-100)",
     color: "var(--fui-primary-100)",
     fontFamily: "var(--fui-font)",
-    fontSize: "12px",
+    fontSize: "11px",
     fontWeight: 600,
     letterSpacing: "1px",
     textTransform: "uppercase",
-    zIndex: 200,
     boxShadow: "var(--fui-glow-primary)",
     "@keyframes toastIn": {
-        from: { opacity: 0, transform: "translate(-50%, 8px)" },
-        to: { opacity: 1, transform: "translate(-50%, 0)" },
+        from: { opacity: 0, transform: "translateY(-4px)" },
+        to: { opacity: 1, transform: "translateY(0)" },
     },
     animation: "toastIn 0.2s ease",
 });
@@ -206,10 +222,13 @@ export function OutputPanel({
         return (
             <div css={panelStyle}>
                 <div css={emptyStyle}>
-                    <div css={emptyTitle}>SunoBrain</div>
-                    <div css={emptyDesc}>
-                        Paste lyrics or describe a theme, then hit Generate to produce
-                        Suno v5.5-optimized output.
+                    <div css={emptyCardStyle}>
+                        <div css={emptyTitle}>SunoBrain</div>
+                        <div css={emptyDesc}>
+                            Paste lyrics or describe a theme, then hit Generate to produce
+                            Suno v5.5-optimized output.
+                        </div>
+                        <div css={emptyHintStyle}>← Start in input panel</div>
                     </div>
                 </div>
             </div>
@@ -222,15 +241,17 @@ export function OutputPanel({
         <div css={panelStyle}>
             <div css={headerBarStyle}>
                 <span css={headerLabelStyle}>Generated</span>
-                <button
-                    css={[copyAllButtonStyle, copiedAll && copiedButtonStyle]}
-                    onClick={handleCopyAll}
-                    type="button"
-                >
-                    {copiedAll ? "\u2713 Copied" : "\u{1F4CB} Copy All for Suno"}
-                </button>
+                <div style={{ display: "flex", alignItems: "center" }}>
+                    <button
+                        css={[copyAllButtonStyle, copiedAll && copiedButtonStyle]}
+                        onClick={handleCopyAll}
+                        type="button"
+                    >
+                        {copiedAll ? "\u2713 Copied" : "\u{1F4CB} Copy All for Suno"}
+                    </button>
+                    {copiedAll && <span css={toastStyle} role="status">Copied</span>}
+                </div>
             </div>
-            {copiedAll && <div css={toastStyle}>Suno-ready block copied to clipboard</div>}
             <SongTitle
                 value={songTitle}
                 onChange={onUpdateResult ? handleTitleChange : undefined}

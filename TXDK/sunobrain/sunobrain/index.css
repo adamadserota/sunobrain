@@ -182,14 +182,14 @@ body::after {
                      bg-intel-primary text-obsidian
                      shadow-lg shadow-intel-primary/20
                      hover:shadow-xl hover:shadow-intel-primary/30
-                     disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none;
+                     disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:grayscale;
     }
 
     .btn-ghost {
         @apply btn-magnetic
                      bg-transparent text-slate-300 border border-obsidian-border
                      hover:bg-obsidian-surface hover:border-intel-primary/50
-                     disabled:opacity-40 disabled:cursor-not-allowed;
+                     disabled:opacity-60 disabled:cursor-not-allowed;
     }
 
     .card-osint {

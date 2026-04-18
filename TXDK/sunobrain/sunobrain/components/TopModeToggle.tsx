@@ -15,9 +15,16 @@ function tabClass(active: boolean): string {
 
 export function TopModeToggle({ topMode, onChange }: TopModeToggleProps) {
     return (
-        <div className="flex rounded-full overflow-hidden border border-obsidian-border p-1 bg-obsidian-surface gap-1">
+        <div
+            role="tablist"
+            aria-label="Generation mode"
+            className="flex rounded-full overflow-hidden border border-obsidian-border p-1 bg-obsidian-surface gap-1"
+        >
             <button
                 type="button"
+                role="tab"
+                aria-selected={topMode === "oneshot"}
+                aria-pressed={topMode === "oneshot"}
                 onClick={() => onChange("oneshot")}
                 className={tabClass(topMode === "oneshot")}
             >
@@ -25,6 +32,9 @@ export function TopModeToggle({ topMode, onChange }: TopModeToggleProps) {
             </button>
             <button
                 type="button"
+                role="tab"
+                aria-selected={topMode === "builder"}
+                aria-pressed={topMode === "builder"}
                 onClick={() => onChange("builder")}
                 className={tabClass(topMode === "builder")}
             >

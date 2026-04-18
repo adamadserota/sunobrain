@@ -26,7 +26,8 @@ export function OneshotPanel({
         <div className="flex flex-col gap-4 flex-1 min-h-0">
             {!input.trim() && step !== "complete" && <PresetCards disabled={loading} onSelect={onInputChange} />}
             <textarea
-                className="input-osint flex-1 min-h-[200px] resize-none leading-relaxed text-sm"
+                className="input-osint flex-1 min-h-[200px] resize-y leading-relaxed text-sm"
+                title="Drag bottom-right corner to resize"
                 placeholder={
                     "Enter anything — a theme, lyrics, a URL, a single word, a concept...\n\n" +
                     "e.g., A melancholic yet hopeful song about leaving your hometown, " +

@@ -4,6 +4,7 @@ import { BuilderSection } from "./BuilderSection";
 import { GenreSelector } from "./GenreSelector";
 import { SavedStylesDrawer } from "./SavedStylesDrawer";
 import { AutoTextarea } from "./AutoTextarea";
+import { CharCount } from "./CharCount";
 import type { BuilderInputs, FlowType, GenerateStep, SavedStyle } from "../types";
 
 type SectionKey = "inspiration" | "genres" | "styleInfluences" | "lyricInput" | "exclusions";
@@ -144,6 +145,12 @@ export function BuilderPanel({
                 onDelete={onDeleteStyle}
             />
 
+            {!hasContent(builderInputs) && step !== "complete" && (
+                <p className="text-xs text-slate-500 -mb-1">
+                    <span className="text-intel-primary-400">✱</span> Fill at least one field below to enable Generate.
+                </p>
+            )}
+
             <BuilderSection
                 label="General Inspiration"
                 helpText="Mood, vibe, concept or theme — influences all outputs"
@@ -204,6 +211,9 @@ export function BuilderPanel({
                     onChange={(e) => onBuilderChange("lyricInput", e.target.value)}
                     disabled={loading}
                 />
+                <div className="flex justify-end mt-1">
+                    <CharCount current={builderInputs.lyricInput.length} max={3000} />
+                </div>
             </BuilderSection>
 
             <BuilderSection

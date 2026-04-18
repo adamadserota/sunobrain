@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { History, Trash2, X } from "lucide-react";
 import type { HistoryEntry } from "../hooks/useSongHistory";
 
@@ -30,6 +31,41 @@ export function HistoryDrawer({
     onDelete,
     onClear,
 }: HistoryDrawerProps) {
+    const closeRef = useRef<HTMLButtonElement>(null);
+    const panelRef = useRef<HTMLDivElement>(null);
+    const previouslyFocused = useRef<HTMLElement | null>(null);
+
+    useEffect(() => {
+        if (!open) return;
+        previouslyFocused.current = document.activeElement as HTMLElement | null;
+        closeRef.current?.focus();
+        const handleKey = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                onClose();
+                return;
+            }
+            if (e.key !== "Tab" || !panelRef.current) return;
+            const focusables = panelRef.current.querySelectorAll<HTMLElement>(
+                'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])',
+            );
+            const first = focusables[0];
+            const last = focusables[focusables.length - 1];
+            if (!first || !last) return;
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        };
+        document.addEventListener("keydown", handleKey);
+        return () => {
+            document.removeEventListener("keydown", handleKey);
+            previouslyFocused.current?.focus?.();
+        };
+    }, [open, onClose]);
+
     if (!open) return null;
 
     return (
@@ -38,13 +74,20 @@ export function HistoryDrawer({
             onClick={onClose}
         >
             <div
+                ref={panelRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="history-drawer-title"
                 className="card-osint w-[400px] max-h-[90vh] m-4 flex flex-col shadow-2xl rounded-2xl overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between px-5 py-4 border-b border-obsidian-border">
                     <div className="flex items-center gap-2">
                         <History size={16} className="text-intel-primary-400" />
-                        <h2 className="text-sm font-bold uppercase tracking-widest text-intel-primary-400">
+                        <h2
+                            id="history-drawer-title"
+                            className="text-sm font-bold uppercase tracking-widest text-intel-primary-400"
+                        >
                             History
                         </h2>
                         <span className="text-xs text-slate-500 font-semibold">
@@ -62,10 +105,11 @@ export function HistoryDrawer({
                             </button>
                         )}
                         <button
+                            ref={closeRef}
                             type="button"
                             onClick={onClose}
                             aria-label="Close"
-                            className="h-7 w-7 rounded-full border border-obsidian-border text-slate-400 flex items-center justify-center hover:border-intel-primary-500 hover:text-intel-primary-400 transition-all"
+                            className="h-7 w-7 rounded-full border border-obsidian-border text-slate-400 flex items-center justify-center hover:border-intel-primary-500 hover:text-intel-primary-400 transition-all focus:outline-none focus:ring-2 focus:ring-intel-primary-500/60"
                         >
                             <X size={14} />
                         </button>
@@ -74,11 +118,13 @@ export function HistoryDrawer({
 
                 <div className="flex-1 overflow-y-auto">
                     {history.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-                            <History size={32} className="text-slate-600 mb-3" />
-                            <p className="text-sm text-slate-400">No songs yet</p>
-                            <p className="text-xs text-slate-500 mt-1">
-                                Generated songs will appear here
+                        <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+                            <div className="h-20 w-20 rounded-full border border-obsidian-border bg-obsidian-raised/60 flex items-center justify-center mb-4">
+                                <History size={40} className="text-intel-primary-500/70" />
+                            </div>
+                            <p className="text-sm font-semibold text-slate-300">No songs yet</p>
+                            <p className="text-xs text-slate-500 mt-2 max-w-[240px]">
+                                Your first generated song will be saved here — up to 10 recent tracks.
                             </p>
                         </div>
                     ) : (
