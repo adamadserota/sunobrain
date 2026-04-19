@@ -288,7 +288,6 @@ async def album_cover(req: AlbumCoverRequest):
             config=genai.types.GenerateImagesConfig(
                 number_of_images=1,
                 aspect_ratio="1:1",
-                image_size="1K",
             ),
         )
 
