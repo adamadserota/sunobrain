@@ -179,7 +179,7 @@ export function App() {
     return (
         <ErrorBoundary>
             <div className="flex flex-col h-screen overflow-hidden bg-obsidian-900">
-                <header className="flex justify-between items-center px-6 py-3 border-b border-obsidian-border bg-obsidian-surface/80 backdrop-blur-xl">
+                <header className="relative z-40 flex justify-between items-center px-6 py-3 border-b border-obsidian-border bg-obsidian-surface/80 backdrop-blur-xl">
                     <div className="flex items-baseline gap-3">
                         <span className="font-display text-2xl tracking-wider text-intel-primary-400 drop-shadow-[0_0_12px_rgba(212,175,55,0.25)]">
                             SUNOBRAIN
