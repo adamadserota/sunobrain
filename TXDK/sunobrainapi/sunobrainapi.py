@@ -20,7 +20,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from parser import parse_draft_response, parse_full_response
-from prompts import PROMPTS, ALBUM_COVER_PROMPT
+from prompts import PROMPTS, ALBUM_COVER_PROMPT, SCENE_SYSTEM_PROMPT, build_scene_user_input
 
 
 def _load_env_local() -> None:
@@ -269,19 +269,47 @@ async def generate(req: GenerateRequest):
 
 @app.post("/api/album-cover", response_model=AlbumCoverResponse)
 async def album_cover(req: AlbumCoverRequest):
-    prompt = ALBUM_COVER_PROMPT.format(
-        plain_lyrics=req.plain_lyrics[:2000],
-        styles=req.styles[:500] if req.styles else "cinematic, moody, atmospheric",
-    )
-
     api_key = _resolve_api_key("gemini", req.api_key)
     if not api_key:
         raise HTTPException(
             status_code=500, detail="Server is missing GEMINI_API_KEY env var",
         )
 
+    plain_lyrics = req.plain_lyrics[:2000]
+    styles = req.styles[:500] if req.styles else "cinematic, moody, atmospheric"
+    title = (req.song_title or "")[:200]
+
     try:
         client = genai.Client(api_key=api_key)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Gemini client init error: {e}")
+
+    # Step 1 — distill lyrics into a visual scene description so Imagen
+    # never sees raw lyric text.
+    try:
+        scene_resp = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=build_scene_user_input(title, styles, plain_lyrics),
+            config=genai.types.GenerateContentConfig(
+                system_instruction=SCENE_SYSTEM_PROMPT,
+            ),
+        )
+        scene = (scene_resp.text or "").strip()
+    except Exception as e:
+        logger.warning(f"Scene distillation failed, falling back to style-only: {e}")
+        scene = ""
+
+    if not scene:
+        scene = (
+            f"A single massive surreal subject dominating the mid-ground of a "
+            f"cinematic natural landscape, its form and materials evoking the "
+            f"mood of {styles}. Dramatic lighting, rich color palette, "
+            f"editorial composition, ethereal atmosphere."
+        )
+
+    prompt = ALBUM_COVER_PROMPT.format(scene=scene)
+
+    try:
         response = client.models.generate_images(
             model=req.model,
             prompt=prompt,

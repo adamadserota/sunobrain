@@ -454,28 +454,62 @@ PROMPTS = {
 
 
 # ---------------------------------------------------------------------------
-# Album Cover Image Generation Prompt
+# Album Cover Image Generation — two-step pipeline
+# Step 1 (Gemini text): lyrics + styles + title → short visual scene description
+# Step 2 (Imagen): scene description → artwork (lyrics never reach Imagen)
 # ---------------------------------------------------------------------------
 
+SCENE_SYSTEM_PROMPT = """\
+You are an art director briefing a visual artist for an album cover. You will \
+receive a song's title, musical style, and lyrics. Your job is to translate \
+the song's ESSENCE into a short visual scene description that an image model \
+can render.
+
+HARD RULES:
+- Output 80-130 words, a single flowing paragraph.
+- Describe IMAGERY ONLY — subject, setting, atmosphere, color palette, \
+lighting, textures, composition. No meta-commentary, no headers.
+- Do NOT quote or paraphrase any lyric lines. Do NOT mention the song title, \
+the artist, text, typography, letters, words, logos, captions, watermarks, \
+or anything written.
+- Translate the song's emotional core and themes into surreal, cinematic \
+visual symbolism — not literal illustration of lyric events.
+- Center on ONE massive, surreal subject in the mid-ground against a natural \
+landscape with cinematic depth.
+- Match color palette and mood to the song's emotional arc and genre.
+- Keep the top ~15% and bottom ~12% visually simpler/darker so text can be \
+overlaid later (do not mention this to the image model — just compose for it).
+
+Start your response directly with the scene description. No preamble."""
+
+
 ALBUM_COVER_PROMPT = """\
-Generate album cover ARTWORK ONLY — no text, no typography, no letters, no logos, no watermarks.
+Album cover ARTWORK ONLY — purely visual, no text of any kind.
 
-LYRICS (derive visual mood, imagery, and symbolism from these):
-{plain_lyrics}
+SCENE:
+{scene}
 
-MUSICAL STYLE: {styles}
+STYLE DIRECTION:
+- Surreal, cinematic, editorial, gallery-worthy composition
+- Rich vibrant colors, high contrast, dynamic lighting
+- Dynamic textures where fitting: iridescent glass, bioluminescence, liquid \
+metal, ethereal mist, volumetric haze
+- Square 1:1 aspect ratio
+- Top ~15% and bottom ~12% slightly darker / simpler (reserved for overlays)
 
-ARTWORK REQUIREMENTS:
-- Create a massive, surreal central subject in the mid-ground, inspired by the lyrics
-- Natural landscape background with cinematic depth and atmosphere
-- The central subject should be surreal, high-contrast, and visually striking against the landscape
-- Adapt the color theme and aesthetic to match the emotional core of the lyrics
-- Dynamic textures: iridescent glass, bioluminescence, liquid gold, ethereal mist — whatever \
-fits the lyrics' mood
-- Rich, vibrant color palette with high contrast
-- Cinematic lighting, editorial quality, gallery-worthy composition
-- Leave the top ~15% of the image as slightly darker/simpler sky area (text will be overlaid later)
-- Leave the bottom ~12% slightly darker (branding will be overlaid later)
-- Square 1:1 aspect ratio composition
-- CRITICAL: Do NOT render ANY text, words, letters, typography, logos, or watermarks anywhere \
-in the image. The image must be purely visual artwork."""
+ABSOLUTELY CRITICAL — the image must contain ZERO text:
+- No letters, no words, no numbers, no typography, no captions
+- No logos, no watermarks, no signatures, no stamps
+- No signs, no labels, no billboards, no writing on any object
+- No books, newspapers, posters, or screens with readable content
+- Pure visual artwork only."""
+
+
+def build_scene_user_input(title: str, styles: str, plain_lyrics: str) -> str:
+    """Format the user-message payload for the scene-description LLM call."""
+    return (
+        f"SONG TITLE: {title or '(untitled)'}\n\n"
+        f"MUSICAL STYLE: {styles or 'cinematic, moody, atmospheric'}\n\n"
+        f"LYRICS (for thematic essence only — do NOT quote, paraphrase, or "
+        f"render as text):\n{plain_lyrics}"
+    )

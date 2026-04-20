@@ -1,7 +1,13 @@
 """Vercel serverless function — POST /api/album-cover.
 
-Always routes to Google Imagen via Gemini — DeepSeek does not support image generation.
-The Gemini key comes from the GEMINI_API_KEY Vercel env var.
+Two-step pipeline to keep raw lyrics out of Imagen:
+  1. Gemini text model distills lyrics + styles + title into a short visual
+     scene description (mood, imagery, symbolism — NO literal lyric text).
+  2. Imagen renders artwork from that scene description only.
+
+This prevents Imagen from treating the lyric block as text to render onto
+the canvas. Title/typography and the Adrift logo are composited client-side
+by coverCompositor.ts, so the image must remain text-free.
 """
 
 import base64
@@ -9,30 +15,65 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler
 
-# Inlined from former _prompts.py (avoids Vercel Python bundler dropping
-# underscore-prefixed helper modules during function packaging).
-_TEMPLATE = """\
-Generate album cover ARTWORK ONLY — no text, no typography, no letters, no logos, no watermarks.
+# ---------------------------------------------------------------------------
+# Step 1 — Gemini text: lyrics → visual scene description
+# ---------------------------------------------------------------------------
+_SCENE_SYSTEM_PROMPT = """\
+You are an art director briefing a visual artist for an album cover. You will \
+receive a song's title, musical style, and lyrics. Your job is to translate \
+the song's ESSENCE into a short visual scene description that an image model \
+can render.
 
-LYRICS (derive visual mood, imagery, and symbolism from these):
-{plain_lyrics}
+HARD RULES:
+- Output 80-130 words, a single flowing paragraph.
+- Describe IMAGERY ONLY — subject, setting, atmosphere, color palette, \
+lighting, textures, composition. No meta-commentary, no headers.
+- Do NOT quote or paraphrase any lyric lines. Do NOT mention the song title, \
+the artist, text, typography, letters, words, logos, captions, watermarks, \
+or anything written.
+- Translate the song's emotional core and themes into surreal, cinematic \
+visual symbolism — not literal illustration of lyric events.
+- Center on ONE massive, surreal subject in the mid-ground against a natural \
+landscape with cinematic depth.
+- Match color palette and mood to the song's emotional arc and genre.
+- Keep the top ~15% and bottom ~12% visually simpler/darker so text can be \
+overlaid later (do not mention this to the image model — just compose for it).
 
-MUSICAL STYLE: {styles}
+Start your response directly with the scene description. No preamble."""
 
-ARTWORK REQUIREMENTS:
-- Create a massive, surreal central subject in the mid-ground, inspired by the lyrics
-- Natural landscape background with cinematic depth and atmosphere
-- The central subject should be surreal, high-contrast, and visually striking against the landscape
-- Adapt the color theme and aesthetic to match the emotional core of the lyrics
-- Dynamic textures: iridescent glass, bioluminescence, liquid gold, ethereal mist — whatever \
-fits the lyrics' mood
-- Rich, vibrant color palette with high contrast
-- Cinematic lighting, editorial quality, gallery-worthy composition
-- Leave the top ~15% of the image as slightly darker/simpler sky area (text will be overlaid later)
-- Leave the bottom ~12% slightly darker (branding will be overlaid later)
-- Square 1:1 aspect ratio composition
-- CRITICAL: Do NOT render ANY text, words, letters, typography, logos, or watermarks anywhere \
-in the image. The image must be purely visual artwork."""
+
+def _build_scene_user_input(title: str, styles: str, plain_lyrics: str) -> str:
+    return (
+        f"SONG TITLE: {title or '(untitled)'}\n\n"
+        f"MUSICAL STYLE: {styles or 'cinematic, moody, atmospheric'}\n\n"
+        f"LYRICS (for thematic essence only — do NOT quote, paraphrase, or "
+        f"render as text):\n{plain_lyrics}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Step 2 — Imagen prompt template (wraps the scene description)
+# ---------------------------------------------------------------------------
+_IMAGEN_TEMPLATE = """\
+Album cover ARTWORK ONLY — purely visual, no text of any kind.
+
+SCENE:
+{scene}
+
+STYLE DIRECTION:
+- Surreal, cinematic, editorial, gallery-worthy composition
+- Rich vibrant colors, high contrast, dynamic lighting
+- Dynamic textures where fitting: iridescent glass, bioluminescence, liquid \
+metal, ethereal mist, volumetric haze
+- Square 1:1 aspect ratio
+- Top ~15% and bottom ~12% slightly darker / simpler (reserved for overlays)
+
+ABSOLUTELY CRITICAL — the image must contain ZERO text:
+- No letters, no words, no numbers, no typography, no captions
+- No logos, no watermarks, no signatures, no stamps
+- No signs, no labels, no billboards, no writing on any object
+- No books, newspapers, posters, or screens with readable content
+- Pure visual artwork only."""
 
 
 def _json_response(handler: BaseHTTPRequestHandler, status: int, body: dict) -> None:
@@ -41,6 +82,40 @@ def _json_response(handler: BaseHTTPRequestHandler, status: int, body: dict) -> 
     handler.send_header("Access-Control-Allow-Origin", "*")
     handler.end_headers()
     handler.wfile.write(json.dumps(body).encode("utf-8"))
+
+
+def _generate_scene_description(
+    api_key: str, title: str, styles: str, plain_lyrics: str
+) -> str:
+    """Distill lyrics into a visual scene description. Falls back to a
+    style-only prompt if the text call fails."""
+    try:
+        from google import genai
+
+        client = genai.Client(api_key=api_key)
+        user_input = _build_scene_user_input(title, styles, plain_lyrics)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=user_input,
+            config=genai.types.GenerateContentConfig(
+                system_instruction=_SCENE_SYSTEM_PROMPT,
+            ),
+        )
+        text = (response.text or "").strip()
+        if text:
+            return text
+    except Exception:  # noqa: BLE001
+        pass
+
+    # Fallback: style-only scene so Imagen never sees raw lyrics even if
+    # the distillation step fails.
+    return (
+        f"A single massive surreal subject dominating the mid-ground of a "
+        f"cinematic natural landscape, its form and materials evoking the "
+        f"mood of {styles or 'cinematic, atmospheric music'}. Dramatic "
+        f"lighting, rich color palette, editorial composition, ethereal "
+        f"atmosphere."
+    )
 
 
 class handler(BaseHTTPRequestHandler):
@@ -61,6 +136,7 @@ class handler(BaseHTTPRequestHandler):
 
         plain_lyrics = (body.get("plain_lyrics") or "")[:2000]
         styles = (body.get("styles") or "cinematic, moody, atmospheric")[:500]
+        song_title = (body.get("song_title") or "")[:200]
         model = body.get("model", "imagen-4.0-fast-generate-001")
 
         if not plain_lyrics:
@@ -76,7 +152,8 @@ class handler(BaseHTTPRequestHandler):
             )
             return
 
-        prompt = _TEMPLATE.format(plain_lyrics=plain_lyrics, styles=styles)
+        scene = _generate_scene_description(api_key, song_title, styles, plain_lyrics)
+        prompt = _IMAGEN_TEMPLATE.format(scene=scene)
 
         try:
             from google import genai
