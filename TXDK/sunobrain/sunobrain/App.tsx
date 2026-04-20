@@ -5,10 +5,12 @@ import { InputPanel } from "./components/InputPanel";
 import { OutputPanel } from "./components/OutputPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { HistoryDrawer } from "./components/HistoryDrawer";
+import { ThemeSelector } from "./components/ThemeSelector";
 import { useGenerate } from "./hooks/useGenerate";
 import { useSavedStyles } from "./hooks/useSavedStyles";
 import { useSongHistory } from "./hooks/useSongHistory";
 import { useLocalStorage } from "./hooks/useLocalStorage";
+import { useTheme } from "./hooks/useTheme";
 import type { Provider, RefreshSection } from "./types";
 import { DEFAULT_MODEL } from "./types";
 
@@ -30,6 +32,7 @@ export function App() {
     const activeModel = provider === "deepseek" ? deepseekModel : geminiModel;
     const setActiveModel = provider === "deepseek" ? setDeepseekModel : setGeminiModel;
 
+    const [theme, setTheme] = useTheme();
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [historyOpen, setHistoryOpen] = useState(false);
     const [panelWidth, setPanelWidth] = useLocalStorage("sunobrain-panel-width", DEFAULT_PANEL_WIDTH);
@@ -210,6 +213,7 @@ export function App() {
                                 </span>
                             )}
                         </button>
+                        <ThemeSelector theme={theme} onChange={setTheme} />
                         <button
                             type="button"
                             onClick={() => setSettingsOpen(true)}

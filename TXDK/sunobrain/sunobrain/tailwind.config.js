@@ -1,3 +1,11 @@
+/**
+ * Tailwind palette routes through CSS variables defined in index.css,
+ * so changing [data-theme] on <html> re-skins the entire UI without
+ * rebuilding. Variables are stored as space-separated RGB triplets so
+ * that alpha utilities (`/20`, `/40`, etc.) still work.
+ */
+const rgb = (token) => `rgb(var(${token}) / <alpha-value>)`;
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -11,30 +19,38 @@ export default {
     extend: {
       colors: {
         'intel-primary': {
-          DEFAULT: '#D4AF37',
-          50: '#FFF9E6',
-          100: '#FFF0BF',
-          200: '#FFE699',
-          300: '#FFD966',
-          400: '#F0C040',
-          500: '#D4AF37',
-          600: '#B8962E',
-          700: '#9A7B24',
-          800: '#7C611B',
-          900: '#5E4813',
-          950: '#3D2E0A',
+          DEFAULT: rgb('--color-accent-500'),
+          50: rgb('--color-accent-50'),
+          100: rgb('--color-accent-50'),
+          200: rgb('--color-accent-300'),
+          300: rgb('--color-accent-300'),
+          400: rgb('--color-accent-400'),
+          500: rgb('--color-accent-500'),
+          600: rgb('--color-accent-600'),
+          700: rgb('--color-accent-700'),
+          800: rgb('--color-accent-700'),
+          900: rgb('--color-accent-950'),
+          950: rgb('--color-accent-950'),
         },
         obsidian: {
-          DEFAULT: '#020617',
-          surface: '#0A0F1E',
-          raised: '#141B2D',
-          border: '#1E293B',
-          muted: '#475569',
-          900: '#020617',
-          800: '#0F172A',
-          700: '#1E293B',
+          DEFAULT: rgb('--color-bg'),
+          surface: rgb('--color-surface'),
+          raised: rgb('--color-raised'),
+          border: rgb('--color-border'),
+          muted: rgb('--color-text-500'),
+          900: rgb('--color-bg'),
+          800: rgb('--color-surface'),
+          700: rgb('--color-raised'),
           accent: '#00FF41',
         },
+        slate: {
+          100: rgb('--color-text-100'),
+          200: rgb('--color-text-200'),
+          300: rgb('--color-text-300'),
+          400: rgb('--color-text-400'),
+          500: rgb('--color-text-500'),
+        },
+        'accent-fg': rgb('--color-accent-fg'),
         intel: {
           blue: '#1A56DB',
           secondary: '#7C3AED',

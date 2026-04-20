@@ -3,63 +3,136 @@
 @tailwind utilities;
 
 /* ──────────────────────────────────────────────────────────────
-   OSINT.place design tokens, mapped to legacy --fui-* variables
-   so emotion-styled components inherit the Midnight Luxe palette.
+   Theme tokens — three themes via [data-theme] on <html>.
+   Tailwind's color palette below (tailwind.config.js) resolves
+   `bg-obsidian-900`, `text-slate-100`, `bg-intel-primary-500`
+   etc. through these RGB-triplet variables, so switching the
+   data-theme attribute re-skins the entire UI.
    ────────────────────────────────────────────────────────────── */
-:root {
+
+/* -------- DARK (default) — Midnight Luxe obsidian + gold -------- */
+:root,
+:root[data-theme="dark"] {
+    /* Surfaces */
+    --color-bg: 2 6 23;
+    --color-surface: 10 15 30;
+    --color-raised: 20 27 45;
+    --color-active: 30 41 59;
+    --color-border: 30 41 59;
+
+    /* Text scale (mapped to slate-100..500) */
+    --color-text-100: 241 245 249;
+    --color-text-200: 226 232 240;
+    --color-text-300: 203 213 225;
+    --color-text-400: 148 163 184;
+    --color-text-500: 100 116 139;
+
+    /* Gold accent scale */
+    --color-accent-50: 255 249 230;
+    --color-accent-300: 255 217 102;
+    --color-accent-400: 240 192 64;
+    --color-accent-500: 212 175 55;
+    --color-accent-600: 184 150 46;
+    --color-accent-700: 154 123 36;
+    --color-accent-950: 61 46 10;
+
+    /* Semantic — on-accent text + focus ring */
+    --color-accent-fg: 2 6 23;
+    --color-focus-ring: 212 175 55;
+
+    /* Legacy --fui-* for Emotion components */
     --fui-font: "Nunito", sans-serif;
     --fui-font-display: "Bangers", cursive;
     --fui-font-mono: "JetBrains Mono", "IBM Plex Mono", monospace;
+    --fui-bg: rgb(var(--color-bg));
+    --fui-bg-section: rgb(var(--color-surface));
+    --fui-bg-hover: rgb(var(--color-raised));
+    --fui-bg-active: rgb(var(--color-active));
+    --fui-bg-input: rgb(var(--color-raised));
+    --fui-primary-100: rgb(var(--color-accent-500));
+    --fui-primary-80: rgb(var(--color-accent-400));
+    --fui-primary-60: rgb(var(--color-accent-300));
+    --fui-primary-40: rgb(var(--color-accent-600));
+    --fui-primary-20: rgb(var(--color-accent-500) / 0.18);
+    --fui-primary-10: rgb(var(--color-accent-500) / 0.10);
+    --fui-primary-5: rgb(var(--color-accent-500) / 0.05);
+    --fui-text: rgb(var(--color-text-100));
+    --fui-text-dim: rgb(var(--color-text-300));
+    --fui-text-muted: rgb(var(--color-text-400));
+    --fui-border: rgb(var(--color-border));
+    --fui-border-focus: rgb(var(--color-accent-500));
+    --fui-glow-primary: 0 0 14px 0 rgb(var(--color-accent-500) / 0.35);
+    --fui-glow-input: 0 0 10px 0 rgb(var(--color-accent-500) / 0.18);
 
-    /* Base — Obsidian dark surfaces */
-    --fui-bg: #020617;
-    --fui-bg-section: #0A0F1E;
-    --fui-bg-hover: #141B2D;
-    --fui-bg-active: #1E293B;
-    --fui-bg-input: #141B2D;
+    /* Grain + scheme */
+    --grain-opacity: 0.03;
+    color-scheme: dark;
+}
 
-    /* Primary — Intel-primary (Midnight Luxe gold) */
-    --fui-primary-100: #D4AF37;
-    --fui-primary-80: #F0C040;
-    --fui-primary-60: #FFD966;
-    --fui-primary-40: #B8962E;
-    --fui-primary-20: rgba(212, 175, 55, 0.18);
-    --fui-primary-10: rgba(212, 175, 55, 0.10);
-    --fui-primary-5: rgba(212, 175, 55, 0.05);
+/* -------- LIGHT — Ivory Luxe warm cream + deep-gold accents -------- */
+:root[data-theme="light"] {
+    --color-bg: 255 251 240;
+    --color-surface: 255 247 227;
+    --color-raised: 249 239 212;
+    --color-active: 240 226 189;
+    --color-border: 216 199 168;
 
-    /* Secondary — soft blue accent */
-    --fui-secondary-100: #7C3AED;
+    /* Text scale inverts — darker text shades on top */
+    --color-text-100: 30 25 10;
+    --color-text-200: 50 42 18;
+    --color-text-300: 82 70 30;
+    --color-text-400: 120 102 60;
+    --color-text-500: 168 148 104;
 
-    /* Feedback */
-    --fui-error-100: #F87171;
-    --fui-warning-100: #F97316;
+    /* Gold accents darken for AA contrast on cream */
+    --color-accent-50: 255 249 230;
+    --color-accent-300: 184 150 46;
+    --color-accent-400: 154 123 36;
+    --color-accent-500: 122 96 24;
+    --color-accent-600: 92 72 16;
+    --color-accent-700: 71 55 12;
+    --color-accent-950: 255 249 230;
 
-    /* Text */
-    --fui-text: #F1F5F9;
-    --fui-text-dim: #CBD5E1;
-    --fui-text-muted: #94A3B8;
+    --color-accent-fg: 255 251 240;
+    --color-focus-ring: 122 96 24;
 
-    /* Border */
-    --fui-border: #1E293B;
-    --fui-border-focus: #D4AF37;
+    --grain-opacity: 0.015;
+    color-scheme: light;
+}
 
-    /* Glow */
-    --fui-glow-primary: 0 0 14px 0 rgba(212, 175, 55, 0.35);
-    --fui-glow-input: 0 0 10px 0 rgba(212, 175, 55, 0.18);
+/* -------- ACCESSIBILITY — WCAG AAA, zero subtlety -------- */
+:root[data-theme="a11y"] {
+    --color-bg: 0 0 0;
+    --color-surface: 0 0 0;
+    --color-raised: 15 15 15;
+    --color-active: 30 30 30;
+    --color-border: 255 255 255;
 
-    /* Spacing */
-    --fui-spacing-1: 4px;
-    --fui-spacing-2: 8px;
-    --fui-spacing-3: 16px;
-    --fui-spacing-4: 24px;
-    --fui-spacing-5: 32px;
-    --fui-spacing-6: 48px;
+    --color-text-100: 255 255 255;
+    --color-text-200: 255 255 255;
+    --color-text-300: 255 255 255;
+    --color-text-400: 230 230 230;
+    --color-text-500: 200 200 200;
+
+    /* Bright yellow — maximum lightness for contrast */
+    --color-accent-50: 255 255 224;
+    --color-accent-300: 255 242 0;
+    --color-accent-400: 255 235 0;
+    --color-accent-500: 255 224 0;
+    --color-accent-600: 255 214 0;
+    --color-accent-700: 230 192 0;
+    --color-accent-950: 40 34 0;
+
+    --color-accent-fg: 0 0 0;
+    --color-focus-ring: 0 255 255; /* cyan — distinct from accent yellow */
+
+    --grain-opacity: 0;
+    color-scheme: dark;
 }
 
 @layer base {
     html {
         @apply scroll-smooth antialiased;
-        color-scheme: dark;
     }
 
     body {
@@ -75,16 +148,22 @@
     .mono-data {
         @apply font-mono text-sm uppercase tracking-widest;
     }
+
+    /* a11y theme: thicker focus rings everywhere */
+    :root[data-theme="a11y"] *:focus-visible {
+        outline: 3px solid rgb(var(--color-focus-ring));
+        outline-offset: 2px;
+    }
 }
 
-/* Subtle film grain overlay */
+/* Subtle film grain overlay — dialled down or off per theme */
 body::after {
     content: '';
     position: fixed;
     inset: 0;
     z-index: 9999;
     pointer-events: none;
-    opacity: 0.03;
+    opacity: var(--grain-opacity, 0.03);
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
 }
 
@@ -130,8 +209,8 @@ body::after {
 .xiii-pow {
     font-family: 'Bangers', cursive;
     letter-spacing: 2px;
-    color: #020617;
-    background: #F0C040;
+    color: rgb(var(--color-accent-fg));
+    background: rgb(var(--color-accent-400));
     padding: 4px 14px;
     clip-path: polygon(0 20%, 10% 0, 30% 15%, 50% 0, 70% 15%, 90% 0, 100% 25%, 92% 50%, 100% 75%, 90% 100%, 70% 85%, 50% 100%, 30% 85%, 10% 100%, 0 75%, 8% 50%);
     animation: xiii-pow-in 0.35s ease-out both;
@@ -166,7 +245,7 @@ body::after {
         left: 50%;
         width: 110%;
         height: 140%;
-        border: 3px solid #D4AF37;
+        border: 3px solid rgb(var(--color-accent-500));
         border-radius: 9999px;
         transform: translate(-50%, -50%) scale(0);
         opacity: 0;
@@ -179,7 +258,7 @@ body::after {
 
     .btn-primary {
         @apply btn-magnetic
-                     bg-intel-primary text-obsidian
+                     bg-intel-primary text-accent-fg
                      shadow-lg shadow-intel-primary/20
                      hover:shadow-xl hover:shadow-intel-primary/30
                      disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:grayscale;
