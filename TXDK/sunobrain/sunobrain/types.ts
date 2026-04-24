@@ -15,13 +15,13 @@ export const GEMINI_MODELS: ModelOption[] = [
 ];
 
 export const DEEPSEEK_MODELS: ModelOption[] = [
-    { id: "deepseek-chat", label: "DeepSeek V3.2" },
-    { id: "deepseek-reasoner", label: "DeepSeek V3.2 (Reasoner)" },
+    { id: "deepseek-v4-flash", label: "DeepSeek V4.0 Flash" },
+    { id: "deepseek-v4-pro", label: "DeepSeek V4.0 Pro" },
 ];
 
 export const DEFAULT_MODEL: Record<Provider, string> = {
     gemini: "gemini-2.5-pro",
-    deepseek: "deepseek-chat",
+    deepseek: "deepseek-v4-flash",
 };
 
 export const PROVIDER_LABEL: Record<Provider, string> = {

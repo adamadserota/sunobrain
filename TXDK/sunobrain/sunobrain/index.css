@@ -10,35 +10,35 @@
    data-theme attribute re-skins the entire UI.
    ────────────────────────────────────────────────────────────── */
 
-/* -------- DARK (default) — Midnight Luxe obsidian + gold -------- */
+/* -------- DARK (default) — Material 3 cyan on neutral-dark -------- */
 :root,
 :root[data-theme="dark"] {
-    /* Surfaces */
-    --color-bg: 2 6 23;
-    --color-surface: 10 15 30;
-    --color-raised: 20 27 45;
-    --color-active: 30 41 59;
-    --color-border: 30 41 59;
+    /* Surfaces — Material 3 surface tonal palette */
+    --color-bg: 14 20 22;               /* surface */
+    --color-surface: 26 33 35;          /* surface-container */
+    --color-raised: 36 41 43;           /* surface-container-high */
+    --color-active: 46 50 52;           /* surface-container-highest */
+    --color-border: 70 76 78;           /* outline-variant */
 
-    /* Text scale (mapped to slate-100..500) */
-    --color-text-100: 241 245 249;
-    --color-text-200: 226 232 240;
-    --color-text-300: 203 213 225;
-    --color-text-400: 148 163 184;
-    --color-text-500: 100 116 139;
+    /* Text scale — Material 3 on-surface tonal steps (higher contrast) */
+    --color-text-100: 230 235 237;      /* on-surface */
+    --color-text-200: 210 218 220;
+    --color-text-300: 191 200 203;      /* on-surface-variant */
+    --color-text-400: 137 147 154;      /* outline */
+    --color-text-500: 105 115 122;
 
-    /* Gold accent scale */
-    --color-accent-50: 255 249 230;
-    --color-accent-300: 255 217 102;
-    --color-accent-400: 240 192 64;
-    --color-accent-500: 212 175 55;
-    --color-accent-600: 184 150 46;
-    --color-accent-700: 154 123 36;
-    --color-accent-950: 61 46 10;
+    /* Cyan accent scale (Material 3 primary tonal palette) */
+    --color-accent-50: 224 247 255;     /* primary-95 */
+    --color-accent-300: 158 239 255;    /* primary-80 */
+    --color-accent-400: 95 224 243;     /* primary-75 */
+    --color-accent-500: 79 216 235;     /* primary-70 (dark-mode primary) */
+    --color-accent-600: 34 187 206;     /* primary-60 */
+    --color-accent-700: 0 135 154;      /* primary-40 */
+    --color-accent-950: 0 54 61;        /* primary-10 */
 
     /* Semantic — on-accent text + focus ring */
-    --color-accent-fg: 2 6 23;
-    --color-focus-ring: 212 175 55;
+    --color-accent-fg: 0 54 61;         /* on-primary (dark) */
+    --color-focus-ring: 79 216 235;
 
     /* Legacy --fui-* for Emotion components */
     --fui-font: "Nunito", sans-serif;
@@ -69,32 +69,33 @@
     color-scheme: dark;
 }
 
-/* -------- LIGHT — Ivory Luxe warm cream + deep-gold accents -------- */
+/* -------- LIGHT — Material 3 cyan on neutral-light -------- */
 :root[data-theme="light"] {
-    --color-bg: 255 251 240;
-    --color-surface: 255 247 227;
-    --color-raised: 249 239 212;
-    --color-active: 240 226 189;
-    --color-border: 216 199 168;
+    /* Surfaces — Material 3 light surface tonal palette */
+    --color-bg: 245 250 252;            /* surface */
+    --color-surface: 232 238 241;       /* surface-container */
+    --color-raised: 216 224 227;        /* surface-container-high */
+    --color-active: 202 211 215;        /* surface-container-highest */
+    --color-border: 186 196 200;        /* outline-variant */
 
-    /* Text scale inverts — darker text shades on top */
-    --color-text-100: 30 25 10;
-    --color-text-200: 50 42 18;
-    --color-text-300: 82 70 30;
-    --color-text-400: 120 102 60;
-    --color-text-500: 168 148 104;
+    /* Text scale — darker on-surface steps for AA on cream */
+    --color-text-100: 23 29 30;         /* on-surface */
+    --color-text-200: 34 40 42;
+    --color-text-300: 64 72 74;         /* on-surface-variant */
+    --color-text-400: 112 121 124;      /* outline */
+    --color-text-500: 150 160 164;
 
-    /* Gold accents darken for AA contrast on cream */
-    --color-accent-50: 255 249 230;
-    --color-accent-300: 184 150 46;
-    --color-accent-400: 154 123 36;
-    --color-accent-500: 122 96 24;
-    --color-accent-600: 92 72 16;
-    --color-accent-700: 71 55 12;
-    --color-accent-950: 255 249 230;
+    /* Cyan accents — darker primary for AA contrast on light bg */
+    --color-accent-50: 205 232 240;
+    --color-accent-300: 0 135 154;
+    --color-accent-400: 0 117 136;
+    --color-accent-500: 0 104 122;      /* primary-40 (light-mode primary) */
+    --color-accent-600: 0 78 92;
+    --color-accent-700: 0 54 65;
+    --color-accent-950: 205 232 240;
 
-    --color-accent-fg: 255 251 240;
-    --color-focus-ring: 122 96 24;
+    --color-accent-fg: 255 255 255;     /* on-primary (light) */
+    --color-focus-ring: 0 104 122;
 
     --grain-opacity: 0.015;
     color-scheme: light;
